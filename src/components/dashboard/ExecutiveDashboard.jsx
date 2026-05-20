@@ -55,12 +55,12 @@ function DashboardError({ error, onRetry }) {
               El frontend está operativo, pero aún no recibe datos consolidados desde el Backend For Frontend.
             </p>
             <small>
-              Levanta el BFF Gateway en http://localhost:8080 para habilitar los indicadores ejecutivos.
+              Levanta el BFF Gateway en http://localhost:8081 para habilitar los indicadores ejecutivos.
             </small>
             <details>
               <summary>Detalle técnico</summary>
               <span>
-                {error?.message || 'No fue posible conectar con BFF Gateway en http://localhost:8080'}
+                {error?.message || 'No fue posible conectar con BFF Gateway en http://localhost:8081'}
               </span>
             </details>
             <div className="error-hero__actions">
