@@ -6,8 +6,24 @@ const currencyFormatter = new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 0,
 })
 
+const dateTimeFormatter = new Intl.DateTimeFormat('es-CL', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+})
+
 function getFirstDefined(...values) {
   return values.find((value) => value !== undefined && value !== null)
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
+function formatDateTime(value) {
+  if (!value) return 'Reciente'
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? String(value) : dateTimeFormatter.format(date)
 }
 
 export function formatClp(value) {
@@ -98,6 +114,25 @@ function normalizeService(service, index) {
   }
 }
 
+function normalizeTrendItem(item, index) {
+  return {
+    label: getFirstDefined(item.label, item.mes, item.month, item.periodo, `M${index + 1}`),
+    value: Number(getFirstDefined(item.valor, item.value, item.total, item.ventas)) || 0,
+  }
+}
+
+function normalizeRecentReport(report, index) {
+  return {
+    id: getFirstDefined(report.id, report.codigo, `reporte-${index}`),
+    title: getFirstDefined(report.titulo, report.title, report.nombre, 'Reporte ejecutivo'),
+    description: getFirstDefined(report.descripcion, report.description, report.area, 'Reporte generado desde Report Service'),
+    category: getFirstDefined(report.area, report.categoria, report.category, 'General'),
+    format: getFirstDefined(report.tipo, report.formato, report.format, 'PDF'),
+    time: formatDateTime(getFirstDefined(report.fechaGeneracion, report.generatedAt, report.fecha)),
+    status: getFirstDefined(report.estado, report.status, 'Completado'),
+  }
+}
+
 export function normalizeDashboardStats(payload = {}) {
   const rawStatus = getFirstDefined(
     payload.statusBff,
@@ -119,6 +154,18 @@ export function normalizeDashboardStats(payload = {}) {
       : Array.isArray(payload.microservicios)
         ? payload.microservicios
         : []
+  const salesTrend = toArray(getFirstDefined(
+    payload.tendenciaVentas,
+    payload.salesTrend,
+    payload.ventasPorMes,
+    payload.trend,
+  ))
+  const recentReports = toArray(getFirstDefined(
+    payload.reportesRecientes,
+    payload.recentReports,
+    payload.reportes,
+    payload.reports,
+  ))
 
   return {
     ventasTotales: getFirstDefined(
@@ -131,6 +178,8 @@ export function normalizeDashboardStats(payload = {}) {
     kpis: kpis.map(normalizeKpi).slice(0, 3),
     alertas: alerts.map(normalizeAlert),
     services: services.map(normalizeService),
+    salesTrend: salesTrend.map(normalizeTrendItem),
+    recentReports: recentReports.map(normalizeRecentReport).slice(0, 3),
     fetchedAt: new Date().toLocaleString('es-CL', {
       dateStyle: 'short',
       timeStyle: 'short',

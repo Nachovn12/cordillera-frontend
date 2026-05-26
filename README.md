@@ -17,7 +17,7 @@ Usuario → Frontend React + Vite → BFF Gateway → Data Service / KPI Service
 El frontend consume únicamente el BFF Gateway mediante:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=http://localhost:8081
 ```
 
 ## Stack utilizado
@@ -57,11 +57,13 @@ npm install
 npm run dev
 ```
 
-URL local:
+URL local de desarrollo:
 
 ```txt
 http://localhost:5173
 ```
+
+> Para la presentacion con Docker, usar `http://localhost:3000`.
 
 ## Build de producción
 
@@ -75,6 +77,65 @@ npm run build
 npm run preview
 ```
 
+## Ejecución con Docker y Nginx
+
+El frontend de Cordillera Platform se ejecuta como una aplicacion React 19 + Vite compilada en modo produccion y servida mediante Nginx.
+
+### Puerto expuesto
+
+| Componente | Puerto |
+|---|---:|
+| Frontend React + Nginx | 3000 |
+| BFF Gateway | 8081 |
+
+### Flujo de comunicación
+
+```text
+Usuario -> Frontend React/Nginx :3000 -> BFF Gateway :8081 -> Microservicios
+```
+
+### Levantar arquitectura completa
+
+Desde la raíz del repositorio:
+
+```bash
+docker compose up -d --build
+```
+
+### Acceso al frontend
+
+Abrir en el navegador:
+
+```text
+http://localhost:3000
+```
+
+### Validación funcional
+
+El frontend fue validado consumiendo datos reales desde el BFF Gateway:
+
+- Dashboard ejecutivo operativo.
+- KPIs estratégicos visibles.
+- Estado de microservicios 4/4 operativo.
+- Reportes recientes visibles.
+- Descarga de reporte PDF funcionando.
+- Configuración remota obtenida desde BFF Gateway.
+
+### Endpoints consumidos desde el BFF
+
+```text
+GET /api/dashboard/stats
+GET /api/dashboard/kpis
+GET /api/reportes
+GET /api/configuracion
+```
+
+### Evidencia de integración
+
+Se validó que el frontend muestra el reporte Reporte Ejecutivo Mayo 2026 generado por report-service y obtenido a través del bff-gateway.
+
+También se validó la descarga del archivo reporte-1.pdf, generado desde el endpoint de exportación del Report Service.
+
 ## Lint
 
 ```bash
@@ -86,7 +147,7 @@ npm run lint
 Crear archivo `.env.local` dentro de la carpeta `frontend`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=http://localhost:8081
 ```
 
 El proyecto incluye `.env.example` como referencia.
@@ -183,7 +244,7 @@ Cada pantalla maneja:
 - `error`: BFF no disponible o endpoint pendiente.
 - `empty`: BFF responde, pero no entrega datos para esa sección.
 
-Mientras el BFF Gateway no exponga los endpoints reales, el frontend muestra estados de integración pendiente sin utilizar datos simulados como información final.
+Si el BFF Gateway no esta disponible, el frontend muestra estados de error o vacios sin utilizar datos simulados como informacion final.
 
 ## Pruebas manuales
 
@@ -193,7 +254,7 @@ Mientras el BFF Gateway no exponga los endpoints reales, el frontend muestra est
 npm install
 ```
 
-### 2. Ejecutar frontend localmente
+### 2. Ejecutar frontend localmente en desarrollo
 
 ```bash
 npm run dev
@@ -204,6 +265,8 @@ Abrir:
 ```txt
 http://localhost:5173
 ```
+
+> Esta URL corresponde solo al servidor de desarrollo de Vite. En Docker/Nginx el frontend se publica en `http://localhost:3000`.
 
 ### 3. Validar build
 
@@ -219,19 +282,29 @@ El comando debe finalizar sin errores y generar la carpeta `dist/`.
 npm run preview
 ```
 
-### 5. Validar integración pendiente
+### 5. Validar integracion Docker
 
-Con el BFF Gateway apagado o sin endpoints implementados, las pantallas deben mostrar mensajes de integración pendiente.
+Desde la raiz del repositorio:
 
-Este comportamiento es esperado hasta que el BFF exponga los endpoints reales.
+```bash
+docker compose up -d --build
+```
+
+Abrir:
+
+```txt
+http://localhost:3000
+```
+
+El frontend debe mostrar datos reales obtenidos desde el BFF Gateway.
 
 ## Consideraciones
 
 - El frontend no consume directamente `data-service`, `kpi-service` ni `report-service`.
-- La integración real queda pendiente hasta que `bff-gateway` exponga los endpoints definidos.
+- La integracion real se realiza mediante `bff-gateway` en el puerto `8081`.
 - La carpeta `docs/ui-reference/` se usa solo como referencia local de diseño y no debe subirse al repositorio.
 - `.env.local`, `dist/` y `node_modules/` no deben versionarse.
 
 ## Estado actual
 
-Frontend preparado para integración con BFF Gateway y validado mediante build de Vite.
+Frontend React 19 + Vite integrado con BFF Gateway, servido con Nginx en Docker y validado mediante build de Vite.

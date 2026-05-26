@@ -18,8 +18,15 @@ const screenComponents = {
   settings: SettingsScreen,
 }
 
+function getInitialScreen() {
+  if (typeof window === 'undefined') return 'dashboard'
+
+  const requestedScreen = new URLSearchParams(window.location.search).get('screen')
+  return screenComponents[requestedScreen] ? requestedScreen : 'dashboard'
+}
+
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState('dashboard')
+  const [activeScreen, setActiveScreen] = useState(getInitialScreen)
   const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0)
   const [bffStatus, setBffStatus] = useState({ status: 'info', label: 'Pendiente' })
   const ActiveScreen = screenComponents[activeScreen]
@@ -31,13 +38,21 @@ export default function App() {
     }
   }
 
+  const handleNavigate = (screenId) => {
+    setActiveScreen(screenId)
+
+    const nextUrl = new URL(window.location.href)
+    nextUrl.searchParams.set('screen', screenId)
+    window.history.replaceState(null, '', nextUrl)
+  }
+
   return (
     <AppShell
       activeScreen={activeScreen}
       bffStatus={bffStatus}
       meta={activeMeta}
       navigationItems={navigationItems}
-      onNavigate={setActiveScreen}
+      onNavigate={handleNavigate}
       onRefresh={handleRefresh}
     >
       <ActiveScreen

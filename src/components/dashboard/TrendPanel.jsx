@@ -1,5 +1,4 @@
 export default function TrendPanel({ title, description, data, type = 'bar', series, badge = '+12.8%' }) {
-  const yAxisLabels = ['1.4M', '1.2M', '1.0M', '800K', '600K', '400K', '200K', '0']
   const chartSeries =
     series ||
     (type === 'line'
@@ -9,8 +8,14 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
   const valuesForScale = lineValues.length ? lineValues : data.map((item) => item.value)
   const max = Math.max(...(valuesForScale.length ? valuesForScale : [1]), 1)
   const min = Math.min(...(lineValues.length ? lineValues : [0]))
-  const barMax = Math.max(1400000, max)
+  const barMax = getNiceMax(max)
+  const yAxisLabels = getYAxisLabels(barMax)
   const hasLineData = type === 'line' && data.length > 0 && chartSeries.some((item) => item.values.length > 0)
+  const latestValue = data.at(-1)?.value ?? 0
+  const firstValue = data.at(0)?.value ?? latestValue
+  const delta = firstValue > 0 ? ((latestValue - firstValue) / firstValue) * 100 : 0
+  const average = data.length > 0 ? data.reduce((sum, item) => sum + item.value, 0) / data.length : 0
+  const averagePosition = Math.min(Math.max((average / barMax) * 100, 0), 100)
 
   const getPoints = (values) =>
     values
@@ -94,17 +99,43 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
           )}
         </div>
       ) : (
-        <div className="bar-chart">
+        <div
+          className="bar-chart bar-chart--executive"
+          style={{
+            '--bar-count': Math.max(data.length, 1),
+            '--average-position': `${averagePosition}%`,
+          }}
+        >
           {data.length > 0 ? (
             <>
+              <div className="bar-chart__summary">
+                <div>
+                  <span>Mes actual</span>
+                  <strong>{formatCompactCurrency(latestValue)}</strong>
+                </div>
+                <div>
+                  <span>Promedio</span>
+                  <strong>{formatCompactCurrency(average)}</strong>
+                </div>
+                <div>
+                  <span>Variacion</span>
+                  <strong className={delta >= 0 ? 'is-positive' : 'is-negative'}>
+                    {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
+                  </strong>
+                </div>
+              </div>
               <div className="bar-chart__axis" aria-hidden="true">
                 {yAxisLabels.map((label) => (
                   <span key={label}>{label}</span>
                 ))}
               </div>
               <div className="bar-chart__plot">
+                <span className="bar-chart__average-line">
+                  <em>Promedio</em>
+                </span>
                 {data.map((item) => (
                   <div className="bar-chart__item" key={item.label}>
+                    <strong>{formatCompactCurrency(item.value)}</strong>
                     <span style={{ '--bar-height': `${Math.min((item.value / barMax) * 100, 100)}%` }} />
                     <small>{item.label}</small>
                   </div>
@@ -121,4 +152,47 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
       )}
     </article>
   )
+}
+
+function getNiceMax(value) {
+  const padded = Math.max(value * 1.15, 1)
+  const magnitude = 10 ** Math.floor(Math.log10(padded))
+  const normalized = padded / magnitude
+  const niceNormalized = normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+
+  return niceNormalized * magnitude
+}
+
+function getYAxisLabels(max) {
+  return [1, 0.75, 0.5, 0.25, 0].map((factor) => formatAxisValue(max * factor))
+}
+
+function formatAxisValue(value) {
+  if (value >= 1000000) {
+    return `${Number((value / 1000000).toFixed(1))}M`
+  }
+
+  if (value >= 1000) {
+    return `${Math.round(value / 1000)}K`
+  }
+
+  return String(Math.round(value))
+}
+
+function formatCompactCurrency(value) {
+  const numberValue = Number(value)
+
+  if (!Number.isFinite(numberValue)) {
+    return '$0'
+  }
+
+  if (numberValue >= 1000000) {
+    return `$${Number((numberValue / 1000000).toFixed(1))}M`
+  }
+
+  if (numberValue >= 1000) {
+    return `$${Math.round(numberValue / 1000)}K`
+  }
+
+  return `$${Math.round(numberValue)}`
 }

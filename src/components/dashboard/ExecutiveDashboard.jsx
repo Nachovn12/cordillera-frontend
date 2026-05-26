@@ -1,5 +1,6 @@
 import AlertItem from './AlertItem'
 import KpiCard from './KpiCard'
+import ReportItem from './ReportItem'
 import ServiceStatusCard from './ServiceStatusCard'
 import TrendPanel from './TrendPanel'
 import AppIcon from '../ui/AppIcon'
@@ -27,7 +28,7 @@ function DashboardSkeleton() {
 
 function DashboardError({ error, onRetry }) {
   const checklist = [
-    ['gateway', 'Levantar BFF Gateway en puerto 8080'],
+    ['gateway', 'Levantar BFF Gateway en puerto 8081'],
     ['database', 'Verificar Data Service en puerto 8083'],
     ['kpis', 'Verificar KPI Service en puerto 8084'],
     ['reports', 'Verificar Report Service en puerto 8085'],
@@ -234,8 +235,9 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
       <section className="content-grid content-grid--dashboard content-grid--dashboard-main">
         <TrendPanel
           title="Tendencia de ventas"
-          description="Tendencia no disponible desde BFF."
-          data={[]}
+          description="Evolucion mensual consolidada desde el BFF Gateway."
+          data={data.salesTrend}
+          badge={data.salesTrend.length > 0 ? 'Historico BFF' : null}
         />
 
         <div className="panel panel--dashboard-reports">
@@ -244,10 +246,18 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
             description="Reportes recientes se habilitarán al conectar report-service vía BFF."
             action="Ver todos los reportes"
           />
-          <EmptyState
-            title="Histórico pendiente de integración"
-            description="El endpoint actual no entrega reportes recientes."
-          />
+          {data.recentReports.length > 0 ? (
+            <div className="stack-list">
+              {data.recentReports.map((report) => (
+                <ReportItem report={report} key={report.id} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="Sin reportes recientes"
+              description="El BFF no entrego reportes recientes para esta consulta."
+            />
+          )}
         </div>
       </section>
 
