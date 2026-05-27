@@ -298,6 +298,43 @@ http://localhost:3000
 
 El frontend debe mostrar datos reales obtenidos desde el BFF Gateway.
 
+## Historias de usuario y subtareas asociadas
+
+| Código Jira | Tipo | Nombre | Responsable | Estado | Relación con Frontend |
+|---|---|---|---|---|---|
+| CORD-18 | Historia de usuario | HU-FE-02 Consumo de API desde BFF | Ignacio Valeria | Finalizada | Implementa el consumo de datos desde BFF Gateway para evitar dependencia directa con microservicios internos. |
+| CORD-20 | Historia de usuario | HU-FE-04 Integración final con Docker y Nginx | Ignacio Valeria | Finalizada | Permite ejecutar el Frontend de forma consistente mediante Docker y Nginx para la entrega y demostración. |
+
+### Detalle funcional de las HU principales
+
+**CORD-18 - HU-FE-02 Consumo de API desde BFF**
+
+Historia de usuario:
+
+> Como usuario quiero que el frontend obtenga datos desde el BFF para no depender directamente de los microservicios internos.
+
+Relación técnica:
+
+- El Frontend consume `VITE_API_BASE_URL=http://localhost:8081`.
+- La pantalla principal obtiene datos desde `/api/dashboard/stats`.
+- La lógica de consumo se centraliza en el servicio frontend correspondiente.
+- El Frontend no llama directamente a Data Service, KPI Service ni Report Service.
+
+**CORD-20 - HU-FE-04 Integración final con Docker y Nginx**
+
+Historia de usuario:
+
+> Como líder quiero que el frontend pueda ejecutarse de forma consistente para facilitar la entrega y demostración.
+
+Relación técnica:
+
+- El Frontend se ejecuta en el puerto `3000`.
+- La app React se construye con Vite.
+- Nginx sirve la aplicación en ambiente Docker.
+- Docker Compose integra Frontend con BFF Gateway.
+
+Estas historias permiten vincular la implementación técnica del Frontend con la planificación y seguimiento del proyecto en Jira.
+
 ## Consideraciones
 
 - El frontend no consume directamente `data-service`, `kpi-service` ni `report-service`.
