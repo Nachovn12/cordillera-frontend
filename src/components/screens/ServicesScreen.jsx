@@ -4,28 +4,18 @@ import AppIcon from '../ui/AppIcon'
 import MetricCard from '../ui/MetricCard'
 import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
-import useServicesStatus from '../../hooks/useServicesStatus'
+import useDashboardStats from '../../hooks/useDashboardStats'
 
 const percentFormatter = new Intl.NumberFormat('es-CL', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 })
 
-function buildMetrics(services, incidents) {
+function buildMetrics(data) {
+  const services = data.services || []
+  const alerts = data.alertas || []
   const operative = services.filter((service) => service.status === 'success').length
-  const openIncidents = incidents.filter((incident) => !['resolved', 'success'].includes(incident.status)).length
-  const latencyValues = services
-    .map((service) => service.latency)
-    .filter((value) => value !== null)
-  const uptimeValues = services
-    .map((service) => service.uptime)
-    .filter((value) => value !== null)
-  const averageLatency = latencyValues.length
-    ? Math.round(latencyValues.reduce((sum, value) => sum + value, 0) / latencyValues.length)
-    : null
-  const averageUptime = uptimeValues.length
-    ? uptimeValues.reduce((sum, value) => sum + value, 0) / uptimeValues.length
-    : null
+  const openIncidents = alerts.length
 
   return [
     {
@@ -36,25 +26,25 @@ function buildMetrics(services, incidents) {
       tone: operative === services.length ? 'success' : 'warning',
     },
     {
-      title: 'Incidentes abiertos',
+      title: 'Alertas activas',
       value: String(openIncidents),
-      detail: incidents.length ? 'Informados por BFF' : 'Sin incidentes informados',
+      detail: alerts.length ? 'Informados por BFF' : 'Sin alertas críticas',
       icon: 'warning',
       tone: openIncidents > 0 ? 'warning' : 'success',
     },
     {
       title: 'Tiempo promedio de respuesta',
-      value: averageLatency !== null ? `${averageLatency} ms` : 'Sin dato',
-      detail: 'Promedio de latencyMs',
+      value: 'No medido',
+      detail: 'Dato no entregado por BFF',
       icon: 'clock',
       tone: 'info',
     },
     {
       title: 'Disponibilidad promedio',
-      value: averageUptime !== null ? `${percentFormatter.format(averageUptime)}%` : 'Sin dato',
-      detail: 'Promedio de uptime',
+      value: 'No medida',
+      detail: 'Sin histórico de uptime',
       icon: 'shield',
-      tone: averageUptime !== null && averageUptime >= 99.5 ? 'success' : 'info',
+      tone: 'info',
     },
   ]
 }
@@ -255,7 +245,7 @@ function IncidentsPanel({ incidents }) {
 }
 
 export default function ServicesScreen() {
-  const { data, loading, error, refetch } = useServicesStatus()
+  const { data, loading, error, refetch } = useDashboardStats()
 
   if (loading) {
     return <ServicesLoadingState />
@@ -271,13 +261,12 @@ export default function ServicesScreen() {
     return <ServicesEmptyState onRetry={refetch} />
   }
 
-  const incidents = data?.incidents || []
-  const events = data?.events || []
-  const availabilityHistory = data?.availabilityHistory || []
-  const metrics = buildMetrics(services, incidents)
-  const availabilityAverage = availabilityHistory.length
-    ? availabilityHistory.reduce((sum, item) => sum + item.value, 0) / availabilityHistory.length
-    : null
+  const metrics = buildMetrics(data)
+  // Extract empty arrays since stats endpoint does not provide them
+  const incidents = []
+  const events = []
+  const availabilityHistory = []
+  const availabilityAverage = null
 
   return (
     <main className="screen screen--services">

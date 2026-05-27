@@ -2,9 +2,12 @@ import AppIcon from '../ui/AppIcon'
 import StatusBadge from '../ui/StatusBadge'
 
 const alertIconMap = {
+  Operacionales: { icon: 'alerts', tone: 'warning' },
   Operacional: { icon: 'alerts', tone: 'warning' },
   KPI: { icon: 'kpis', tone: 'teal' },
+  Servicios: { icon: 'services', tone: 'success' },
   Servicio: { icon: 'services', tone: 'success' },
+  Reportes: { icon: 'document', tone: 'info' },
   Reporte: { icon: 'document', tone: 'info' },
   Inventario: { icon: 'inventory', tone: 'warning' },
   General: { icon: 'alerts', tone: 'info' },
@@ -12,6 +15,7 @@ const alertIconMap = {
 
 const severityMap = {
   Crítica: 'critical',
+  Media: 'warning',
   Advertencia: 'warning',
   Informativa: 'info',
   Resuelta: 'resolved',
@@ -21,10 +25,20 @@ const stateMap = {
   Activa: 'warning',
   'En seguimiento': 'info',
   Resuelta: 'resolved',
+  Informativa: 'info',
   Pendiente: 'pending',
 }
 
-export default function AlertItem({ alert, table = false }) {
+export default function AlertItem({
+  alert,
+  table = false,
+  isMenuOpen = false,
+  onView,
+  onToggleMenu,
+  onCopyDescription,
+  onCopyOrigin,
+  onMarkReviewed,
+}) {
   const isArrayAlert = Array.isArray(alert)
   const title = isArrayAlert ? alert[0] : alert.title
   const description = isArrayAlert ? alert[1] : alert.description
@@ -62,12 +76,35 @@ export default function AlertItem({ alert, table = false }) {
           <StatusBadge status={stateStatus} label={stateLabel} />
         </div>
         <div className="alerts-card-item__actions">
-          <button className="icon-button" type="button" aria-label={`Ver detalle de ${title}`}>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={onView}
+            aria-label={`Ver detalle de ${title}`}
+            title={`Ver detalle de ${title}`}
+          >
             <AppIcon name="eye" size={16} strokeWidth={2} />
           </button>
-          <button className="icon-button" type="button" aria-label="Más opciones" disabled>
-            <AppIcon name="more" size={16} strokeWidth={2} />
-          </button>
+          <div className="alert-menu-anchor">
+            <button
+              className="icon-button"
+              type="button"
+              onClick={onToggleMenu}
+              aria-label={`Más acciones de ${title}`}
+              title={`Más acciones de ${title}`}
+              aria-expanded={isMenuOpen}
+            >
+              <AppIcon name="more" size={16} strokeWidth={2} />
+            </button>
+            {isMenuOpen && (
+              <div className="alert-context-menu" role="menu">
+                <button type="button" role="menuitem" onClick={onView}>Ver detalle</button>
+                <button type="button" role="menuitem" onClick={onCopyDescription}>Copiar descripción</button>
+                <button type="button" role="menuitem" onClick={onCopyOrigin}>Copiar origen</button>
+                <button type="button" role="menuitem" onClick={onMarkReviewed}>Marcar como revisada</button>
+              </div>
+            )}
+          </div>
         </div>
       </article>
     )

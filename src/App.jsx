@@ -6,7 +6,7 @@ import KpisScreen from './components/screens/KpisScreen'
 import ReportsScreen from './components/screens/ReportsScreen'
 import ServicesScreen from './components/screens/ServicesScreen'
 import SettingsScreen from './components/screens/SettingsScreen'
-import { navigationItems, screenMeta } from './data/mockDashboardData'
+import { navigationItems, screenMeta } from './data/appConfig'
 import './styles/dashboard.css'
 
 const screenComponents = {

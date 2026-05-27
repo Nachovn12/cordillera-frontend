@@ -15,15 +15,11 @@ function getFirstDefined(...values) {
   return values.find((value) => value !== undefined && value !== null)
 }
 
-function toArray(value) {
-  return Array.isArray(value) ? value : []
-}
-
 function normalizeFormat(value) {
   const normalized = String(value || '').trim().toLowerCase()
 
   if (normalized === 'excel' || normalized === 'xlsx' || normalized === 'xls') {
-    return { label: 'Excel', value: 'excel' }
+    return { label: 'XLS', value: 'excel' }
   }
 
   if (normalized === 'json') {
@@ -105,10 +101,6 @@ function normalizeReport(report, index) {
   }
 }
 
-function normalizeOptionalList(value) {
-  return toArray(value).map((item, index) => normalizeReport(item, index))
-}
-
 export function normalizeReportsResponse(payload) {
   const rawReports = Array.isArray(payload)
     ? payload
@@ -119,10 +111,7 @@ export function normalizeReportsResponse(payload) {
         : []
 
   return {
-    reportes: rawReports.map(normalizeReport),
-    plantillas: normalizeOptionalList(getFirstDefined(payload?.plantillas, payload?.templates)),
-    exportaciones: normalizeOptionalList(getFirstDefined(payload?.exportaciones, payload?.exports)),
-    programaciones: normalizeOptionalList(getFirstDefined(payload?.programaciones, payload?.schedules)),
+    reportes: rawReports.map((report, index) => normalizeReport(report, index)),
     fetchedAt: new Date().toLocaleString('es-CL', {
       dateStyle: 'short',
       timeStyle: 'short',
@@ -170,13 +159,17 @@ export async function getReportes() {
 }
 
 export async function generarReporte(payload = {}) {
-  const response = await requestWithTimeout(`${API_BASE_URL}/api/reportes/generar`, {
+  const response = await requestWithTimeout(`${API_BASE_URL}/api/reportes`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   })
+
+  if (!response.ok) {
+    throw new Error('No fue posible generar el reporte desde Report Service.')
+  }
 
   return parseJsonResponse(response)
 }

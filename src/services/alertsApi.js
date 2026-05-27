@@ -1,180 +1,185 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081').replace(/\/$/, '')
+import { getDashboardStats } from './dashboardApi'
+import { getReportes } from './reportsApi'
 
 const dateTimeFormatter = new Intl.DateTimeFormat('es-CL', {
   dateStyle: 'short',
   timeStyle: 'short',
 })
 
-const timeFormatter = new Intl.DateTimeFormat('es-CL', {
-  hour: '2-digit',
-  minute: '2-digit',
-})
-
-function getFirstDefined(...values) {
-  return values.find((value) => value !== undefined && value !== null)
-}
-
-function toArray(value) {
-  return Array.isArray(value) ? value : []
-}
-
-function normalizeSeverity(value) {
-  const normalized = String(value || '').trim().toLowerCase()
-
-  if (normalized.includes('crít') || normalized.includes('crit') || normalized.includes('critical')) {
-    return { severity: 'critical', label: 'Crítica' }
-  }
-
-  if (normalized.includes('advert') || normalized.includes('warning')) {
-    return { severity: 'warning', label: 'Advertencia' }
-  }
-
-  if (normalized.includes('resuelta') || normalized.includes('resolved')) {
-    return { severity: 'resolved', label: 'Resuelta' }
-  }
-
-  return { severity: 'info', label: value ? String(value) : 'Informativa' }
-}
-
-function normalizeState(value) {
-  const normalized = String(value || '').trim().toLowerCase()
-
-  if (normalized.includes('resuelt') || normalized.includes('resolved')) {
-    return { status: 'resolved', label: 'Resuelta' }
-  }
-
-  if (normalized.includes('seguimiento')) {
-    return { status: 'info', label: 'En seguimiento' }
-  }
-
-  if (normalized.includes('pend')) {
-    return { status: 'pending', label: 'Pendiente' }
-  }
-
-  if (normalized.includes('activa') || normalized.includes('active') || normalized.includes('abierta')) {
-    return { status: 'warning', label: 'Activa' }
-  }
-
-  return { status: 'info', label: value ? String(value) : 'Estado no informado' }
-}
-
-function getIconByCategory(category, severity) {
-  const normalized = String(category || '').toLowerCase()
-
-  if (normalized.includes('serv')) return 'services'
-  if (normalized.includes('reporte')) return 'document'
-  if (normalized.includes('kpi')) return 'kpis'
-  if (normalized.includes('invent')) return 'inventory'
-  if (severity === 'critical') return 'shield'
-  return 'alerts'
-}
-
 function formatDetectedAt(value) {
-  if (!value) return 'Sin fecha'
+  if (!value) return 'Reciente'
 
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
 
-  const today = new Date()
-  const sameDay = date.toDateString() === today.toDateString()
-
-  return sameDay ? `Hoy ${timeFormatter.format(date)}` : dateTimeFormatter.format(date)
+  return dateTimeFormatter.format(date)
 }
 
-function normalizeAlert(alert, index) {
-  const severityMeta = normalizeSeverity(getFirstDefined(alert.severidad, alert.severity, alert.tipo, alert.type))
-  const stateMeta = normalizeState(getFirstDefined(alert.estado, alert.status, alert.state))
-  const category = getFirstDefined(alert.categoria, alert.category, 'General')
-  const detectedAt = getFirstDefined(
-    alert.fechaDeteccion,
-    alert.detectedAt,
-    alert.createdAt,
-    alert.fecha,
-    alert.time,
-  )
-
+function createAlert({
+  id,
+  title,
+  description,
+  category,
+  severity,
+  severityLabel,
+  status,
+  statusLabel,
+  origin,
+  detectedAt,
+  icon,
+  recommendation,
+}) {
   return {
-    id: getFirstDefined(alert.id, alert.codigo, `alerta-${index}`),
-    title: getFirstDefined(alert.titulo, alert.title, alert.nombre, 'Alerta sin título'),
-    description: getFirstDefined(alert.descripcion, alert.description, alert.mensaje, alert.message, ''),
+    id,
+    title,
+    description,
     category,
-    origin: getFirstDefined(alert.origen, alert.origin, alert.fuente, category),
-    severity: severityMeta.severity,
-    severityLabel: severityMeta.label,
-    status: stateMeta.status,
-    statusLabel: stateMeta.label,
+    severity,
+    severityLabel,
+    status,
+    statusLabel,
+    origin,
     detectedAt,
     detectedAtLabel: formatDetectedAt(detectedAt),
-    icon: getIconByCategory(category, severityMeta.severity),
+    icon,
+    recommendation,
+    reviewed: false,
   }
 }
 
-function normalizeHistoryItem(item, index) {
-  const base = normalizeAlert(item, index)
-
-  return {
-    ...base,
-    title: getFirstDefined(item.titulo, item.title, item.evento, item.nombre, base.title),
-    description: getFirstDefined(item.descripcion, item.description, item.detalle, item.mensaje, base.description),
-  }
+function normalizeBffLabel(value) {
+  return String(value || '').trim().toLowerCase()
 }
 
-function normalizeHeatmapItem(item, index) {
-  return {
-    id: getFirstDefined(item.id, item.dia, item.fecha, `volumen-${index}`),
-    label: getFirstDefined(item.label, item.dia, item.fecha, `Día ${index + 1}`),
-    values: toArray(getFirstDefined(item.values, item.valores, item.volumenes)).map((value) => Number(value) || 0),
+export function buildAlertsFromBackend({ dashboard, reports }) {
+  const detectedAt = new Date().toISOString()
+  const alerts = []
+  const bffStatusLabel = normalizeBffLabel(dashboard?.bffStatus?.label)
+
+  if (bffStatusLabel === 'operativo') {
+    alerts.push(createAlert({
+      id: 'event-bff-operativo',
+      title: 'Flujo BFF operativo',
+      description: 'Frontend, BFF Gateway y microservicios principales responden correctamente.',
+      category: 'Servicios',
+      severity: 'info',
+      severityLabel: 'Informativa',
+      status: 'resolved',
+      statusLabel: 'Resuelta',
+      origin: 'BFF Gateway',
+      detectedAt,
+      icon: 'services',
+      recommendation: 'Validar disponibilidad desde Estado de Servicios.',
+    }))
+  } else if (bffStatusLabel === 'degradado') {
+    alerts.push(createAlert({
+      id: 'alert-bff-degradado',
+      title: 'BFF Gateway en estado degradado',
+      description: 'El BFF respondió con estado degradado. Revisar servicios internos.',
+      category: 'Servicios',
+      severity: 'critical',
+      severityLabel: 'Crítica',
+      status: 'warning',
+      statusLabel: 'Activa',
+      origin: 'BFF Gateway',
+      detectedAt,
+      icon: 'shield',
+      recommendation: 'Validar disponibilidad desde Estado de Servicios.',
+    }))
   }
+
+  const warningKpis = (dashboard?.kpis || []).filter((kpi) => kpi.status === 'warning')
+
+  if (warningKpis.length > 0) {
+    alerts.push(createAlert({
+      id: 'alert-kpis-advertencia',
+      title: 'KPIs requieren revisión',
+      description: 'Existen indicadores con estado de advertencia.',
+      category: 'Operacionales',
+      severity: 'warning',
+      severityLabel: 'Media',
+      status: 'warning',
+      statusLabel: 'Activa',
+      origin: 'KPI Service',
+      detectedAt,
+      icon: 'kpis',
+      recommendation: 'Revisar indicadores con estado Advertencia.',
+    }))
+  }
+
+  const reportList = reports?.reportes || []
+
+  if (reportList.length > 0) {
+    alerts.push(createAlert({
+      id: 'event-reportes-disponibles',
+      title: 'Reportes disponibles',
+      description: 'Report Service entregó reportes ejecutivos disponibles para consulta.',
+      category: 'Reportes',
+      severity: 'info',
+      severityLabel: 'Informativa',
+      status: 'resolved',
+      statusLabel: 'Resuelta',
+      origin: 'Report Service',
+      detectedAt,
+      icon: 'document',
+      recommendation: 'Verificar Centro de Reportes.',
+    }))
+  } else {
+    alerts.push(createAlert({
+      id: 'event-sin-reportes',
+      title: 'Sin reportes recientes informados',
+      description: 'El BFF no entregó reportes recientes para esta consulta.',
+      category: 'Reportes',
+      severity: 'info',
+      severityLabel: 'Informativa',
+      status: 'info',
+      statusLabel: 'Informativa',
+      origin: 'BFF Gateway',
+      detectedAt,
+      icon: 'document',
+      recommendation: 'Verificar Centro de Reportes.',
+    }))
+  }
+
+  ;(dashboard?.services || [])
+    .filter((service) => service.status !== 'success')
+    .forEach((service) => {
+      alerts.push(createAlert({
+        id: `alert-servicio-${service.id}`,
+        title: `${service.name} requiere revisión`,
+        description: `${service.name} fue informado con estado ${service.statusLabel}.`,
+        category: 'Servicios',
+        severity: service.status === 'danger' ? 'critical' : 'warning',
+        severityLabel: service.status === 'danger' ? 'Crítica' : 'Media',
+        status: 'warning',
+        statusLabel: 'Activa',
+        origin: 'BFF Gateway',
+        detectedAt,
+        icon: 'services',
+        recommendation: 'Validar disponibilidad desde Estado de Servicios.',
+      }))
+    })
+
+  return alerts
 }
 
-export function normalizeAlertsResponse(payload) {
-  const rawAlerts = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.alertas)
-      ? payload.alertas
-      : Array.isArray(payload?.alerts)
-        ? payload.alerts
-        : []
+export async function getAlertas() {
+  const [dashboard, reports] = await Promise.all([
+    getDashboardStats(),
+    getReportes().catch(() => ({ reportes: [] })),
+  ])
+  const alertas = buildAlertsFromBackend({ dashboard, reports })
+  const historial = [...alertas]
+    .sort((first, second) => new Date(second.detectedAt) - new Date(first.detectedAt))
+    .slice(0, 5)
 
   return {
-    alertas: rawAlerts.map(normalizeAlert),
-    historial: toArray(getFirstDefined(payload?.historial, payload?.history, payload?.eventos)).map(normalizeHistoryItem),
-    heatmap: toArray(getFirstDefined(payload?.heatmap, payload?.volumenPorDia, payload?.volumenes)).map(normalizeHeatmapItem),
+    alertas,
+    historial,
+    heatmap: [],
     fetchedAt: new Date().toLocaleString('es-CL', {
       dateStyle: 'short',
       timeStyle: 'short',
     }),
   }
-}
-
-async function requestWithTimeout(url) {
-  const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => controller.abort(), 8000)
-
-  try {
-    return await fetch(url, {
-      signal: controller.signal,
-    })
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error(`Tiempo de espera agotado al conectar con BFF Gateway en ${API_BASE_URL}`)
-    }
-
-    throw new Error(`No fue posible conectar con BFF Gateway en ${API_BASE_URL}`)
-  } finally {
-    window.clearTimeout(timeoutId)
-  }
-}
-
-export async function getAlertas() {
-  const response = await requestWithTimeout(`${API_BASE_URL}/api/dashboard/alertas`)
-
-  if (!response.ok) {
-    throw new Error(`BFF Gateway respondió con estado HTTP ${response.status}`)
-  }
-
-  const text = await response.text()
-  const payload = text ? JSON.parse(text) : {}
-
-  return normalizeAlertsResponse(payload)
 }

@@ -20,13 +20,13 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
   const getPoints = (values) =>
     values
       .map((value, index) => {
-        const x = 7 + (index / Math.max(values.length - 1, 1)) * 86
-        const y = 86 - ((value - min) / Math.max(max - min, 1)) * 68
+        const x = 30 + (index / Math.max(values.length - 1, 1)) * 940
+        const y = 170 - ((value - min) / Math.max(max - min, 1)) * 140
         return `${x.toFixed(1)},${y.toFixed(1)}`
       })
       .join(' ')
 
-  const metaY = max > 0 ? 86 - ((100 - min) / Math.max(max - min, 1)) * 68 : 40
+  const metaY = max > 0 ? 170 - ((100 - min) / Math.max(max - min, 1)) * 140 : 100
 
   return (
     <article className={`trend-panel trend-panel--${type}`}>
@@ -54,21 +54,21 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
                   </span>
                 </div>
               )}
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                {[20, 40, 60, 80].map((y) => (
-                  <line key={y} x1="7" y1={y} x2="93" y2={y} stroke="#f1f5f9" strokeWidth="0.5" />
+              <svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true">
+                {[30, 75, 120, 165].map((y) => (
+                  <line key={y} x1="30" y1={y} x2="970" y2={y} stroke="#f1f5f9" strokeWidth="1" />
                 ))}
                 <line
                   className="line-chart__meta"
-                  x1="7" y1={metaY.toFixed(1)}
-                  x2="93" y2={metaY.toFixed(1)}
+                  x1="30" y1={metaY.toFixed(1)}
+                  x2="970" y2={metaY.toFixed(1)}
                 />
                 {chartSeries.map((item) => (
                   <g key={item.name}>
                     <polyline className={`line-chart__line line-chart__line--${item.tone}`} points={getPoints(item.values)} />
                     {item.values.map((val, index) => {
-                      const x = 7 + (index / Math.max(item.values.length - 1, 1)) * 86
-                      const y = 86 - ((val - min) / Math.max(max - min, 1)) * 68
+                      const x = 30 + (index / Math.max(item.values.length - 1, 1)) * 940
+                      const y = 170 - ((val - min) / Math.max(max - min, 1)) * 140
                       return (
                         <circle
                           className="line-chart__point"
@@ -76,9 +76,9 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
                           cy={y.toFixed(1)}
                           fill="#fff"
                           key={`${item.name}-${index}`}
-                          r="1.5"
-                          stroke="#0d9488"
-                          strokeWidth="0.8"
+                          r="5"
+                          stroke={item.tone === 'orange' ? '#f97316' : item.tone === 'blue' ? '#2563eb' : '#0d9488'}
+                          strokeWidth="2.5"
                         />
                       )
                     })}
@@ -93,8 +93,8 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
             </>
           ) : (
             <div className="empty-state empty-state--chart">
-              <strong>Histórico pendiente de integración</strong>
-              <p>El endpoint actual no entrega evolución histórica para este panel.</p>
+              <strong>Base histórica en construcción</strong>
+              <p>El BFF no entregó evolución histórica para este panel.</p>
             </div>
           )}
         </div>
@@ -118,7 +118,7 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
                   <strong>{formatCompactCurrency(average)}</strong>
                 </div>
                 <div>
-                  <span>Variacion</span>
+                  <span>Variación</span>
                   <strong className={delta >= 0 ? 'is-positive' : 'is-negative'}>
                     {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
                   </strong>
@@ -144,8 +144,8 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
             </>
           ) : (
             <div className="empty-state empty-state--chart">
-              <strong>Histórico pendiente de integración</strong>
-              <p>El endpoint actual no entrega serie histórica de ventas.</p>
+              <strong>Base histórica en construcción</strong>
+              <p>El BFF no entregó serie histórica de ventas.</p>
             </div>
           )}
         </div>

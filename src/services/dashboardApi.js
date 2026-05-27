@@ -73,7 +73,7 @@ function normalizeKpi(kpi, index) {
     unit,
     status,
     statusLabel,
-    change: getFirstDefined(kpi.variacion, kpi.change, kpi.comparativo, 'Sin comparativo'),
+    change: getFirstDefined(kpi.variacion, kpi.change, kpi.comparativo, 'Comparativo no disponible'),
     icon: String(category).toLowerCase().includes('invent')
       ? 'inventory'
       : String(category).toLowerCase().includes('fin')

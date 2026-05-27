@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useAlerts from '../../hooks/useAlerts'
 import AlertItem from '../dashboard/AlertItem'
 import AppIcon from '../ui/AppIcon'
 import MetricCard from '../ui/MetricCard'
 import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
+
+const EMPTY_ALERTS = []
 
 const tabs = [
   { label: 'Todas', value: 'todas', icon: 'layers' },
@@ -24,10 +26,10 @@ function isToday(value) {
 }
 
 function buildMetrics(alerts) {
-  const active = alerts.filter((alert) => alert.statusLabel === 'Activa' || alert.status === 'warning').length
-  const critical = alerts.filter((alert) => alert.severity === 'critical').length
+  const active = alerts.filter((alert) => alert.statusLabel === 'Activa').length
+  const critical = alerts.filter((alert) => alert.severityLabel === 'Crítica').length
   const tracking = alerts.filter((alert) => alert.statusLabel === 'En seguimiento').length
-  const resolvedToday = alerts.filter((alert) => alert.status === 'resolved' && isToday(alert.detectedAt)).length
+  const resolvedToday = alerts.filter((alert) => alert.statusLabel === 'Resuelta' && isToday(alert.detectedAt)).length
 
   return [
     {
@@ -61,22 +63,39 @@ function buildMetrics(alerts) {
   ]
 }
 
+function matchesTab(alert, activeTab) {
+  const category = String(alert.category || '').toLowerCase()
+  const origin = String(alert.origin || '').toLowerCase()
+
+  if (activeTab === 'todas') return true
+  if (activeTab === 'criticas') return alert.severityLabel === 'Crítica'
+  if (activeTab === 'operacionales') return category.includes('operacional') || origin.includes('kpi')
+  if (activeTab === 'reportes') return category.includes('reporte')
+  if (activeTab === 'servicios') return category.includes('servicio')
+
+  return true
+}
+
 function filterAlerts(alerts, activeTab, query) {
   const normalizedQuery = query.trim().toLowerCase()
 
   return alerts.filter((alert) => {
-    const matchesTab = activeTab === 'todas'
-      || (activeTab === 'criticas' && alert.severity === 'critical')
-      || (activeTab === 'operacionales' && String(alert.category).toLowerCase().includes('operacional'))
-      || (activeTab === 'reportes' && String(alert.category).toLowerCase().includes('reporte'))
-      || (activeTab === 'servicios' && String(alert.category).toLowerCase().includes('serv'))
-
     const matchesSearch = !normalizedQuery
-      || [alert.title, alert.description, alert.category, alert.origin, alert.statusLabel, alert.severityLabel]
-        .some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+      || [
+        alert.title,
+        alert.description,
+        alert.category,
+        alert.origin,
+        alert.statusLabel,
+        alert.severityLabel,
+      ].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
 
-    return matchesTab && matchesSearch
+    return matchesTab(alert, activeTab) && matchesSearch
   })
+}
+
+function sortByDateDesc(alerts) {
+  return [...alerts].sort((first, second) => new Date(second.detectedAt) - new Date(first.detectedAt))
 }
 
 function AlertsLoadingState() {
@@ -107,10 +126,10 @@ function AlertsErrorState({ error, onRetry }) {
           <AppIcon name="gatewayOff" size={25} strokeWidth={2} />
         </div>
         <div>
-          <StatusBadge status="warning" label="Endpoint pendiente" />
-          <h2>Centro de Alertas pendiente de conexión</h2>
-          <p>El frontend está operativo, pero aún no recibe alertas desde el BFF Gateway.</p>
-          <small>Endpoint esperado: GET /api/dashboard/alertas</small>
+          <StatusBadge status="warning" label="BFF sin respuesta" />
+          <h2>No fue posible cargar el Centro de Alertas</h2>
+          <p>El frontend está operativo, pero no recibió una respuesta válida desde el BFF Gateway.</p>
+          <small>Fuente consultada: GET /api/dashboard/stats y GET /api/reportes</small>
           <details>
             <summary>Ver detalle técnico</summary>
             <span>{error?.message || 'No fue posible conectar con BFF Gateway.'}</span>
@@ -125,24 +144,98 @@ function AlertsErrorState({ error, onRetry }) {
   )
 }
 
-function AlertsEmptyState({ onRetry }) {
+function AlertsEmptyInline({ activeTab }) {
+  const selectedTab = tabs.find((tab) => tab.value === activeTab)?.label || 'seleccionado'
+
   return (
-    <main className="screen screen--alerts">
-      <section className="integration-empty-state">
-        <div className="icon-box icon-box--info">
-          <AppIcon name="alerts" size={25} strokeWidth={2} />
+    <div className="alerts-empty-inline">
+      <AppIcon name="search" size={22} strokeWidth={2} />
+      <strong>No hay alertas para el filtro seleccionado.</strong>
+      <span>El BFF Gateway no informó eventos asociados a esta categoría: {selectedTab}.</span>
+    </div>
+  )
+}
+
+function getRecommendation(alert) {
+  if (alert.recommendation) return alert.recommendation
+  const category = String(alert.category || '').toLowerCase()
+
+  if (category.includes('serv')) return 'Validar disponibilidad desde Estado de Servicios.'
+  if (category.includes('reporte')) return 'Verificar Centro de Reportes.'
+  return 'Revisar indicadores con estado Advertencia.'
+}
+
+function AlertDetailModal({ alert, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  if (!alert) return null
+
+  return (
+    <div className="alert-modal-overlay" role="presentation" onMouseDown={onClose}>
+      <section
+        className="alert-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alert-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="alert-modal__header">
+          <div>
+            <StatusBadge status={alert.severity} label={alert.severityLabel} />
+            <h2 id="alert-modal-title">{alert.title}</h2>
+            <p>{alert.description}</p>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar detalle de alerta" title="Cerrar">
+            <AppIcon name="more" size={16} strokeWidth={2} />
+          </button>
         </div>
-        <div>
-          <StatusBadge status="info" label="Sin alertas" />
-          <h2>No hay alertas disponibles</h2>
-          <p>Cuando el BFF reciba eventos operacionales o alertas de KPIs, aparecerán en este panel.</p>
+
+        <div className="alert-modal__details">
+          <div>
+            <span>Categoría</span>
+            <strong>{alert.category}</strong>
+          </div>
+          <div>
+            <span>Severidad</span>
+            <strong>{alert.severityLabel}</strong>
+          </div>
+          <div>
+            <span>Estado</span>
+            <strong>{alert.statusLabel}</strong>
+          </div>
+          <div>
+            <span>Origen</span>
+            <strong>{alert.origin}</strong>
+          </div>
+          <div>
+            <span>Fecha/hora</span>
+            <strong>{alert.detectedAtLabel}</strong>
+          </div>
+          <div>
+            <span>Fuente</span>
+            <strong>BFF Gateway</strong>
+          </div>
         </div>
-        <button type="button" onClick={onRetry} aria-label="Actualizar alertas">
-          <AppIcon name="refresh" size={16} strokeWidth={2} />
-          Actualizar
-        </button>
+
+        <div className="alert-modal__recommendation">
+          <span>Acción recomendada</span>
+          <p>{getRecommendation(alert)}</p>
+        </div>
+
+        <div className="alert-modal__actions">
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Cerrar
+          </button>
+        </div>
       </section>
-    </main>
+    </div>
   )
 }
 
@@ -151,11 +244,21 @@ function PriorityPanel({ alerts }) {
     .filter((alert) => alert.severity === 'critical' || alert.severity === 'warning')
     .slice(0, 4)
 
-  if (!priorityAlerts.length) return null
+  if (!priorityAlerts.length) {
+    return (
+      <div className="panel panel--priority">
+        <SectionHeader title="Alertas prioritarias" description="Alertas derivadas del estado de integración." />
+        <div className="alerts-empty-side">
+          <AppIcon name="checkCircle" size={18} strokeWidth={2} />
+          <span>Sin críticas informadas.</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="panel panel--priority">
-      <SectionHeader title="Alertas prioritarias" description="Derivadas desde datos reales del BFF." />
+      <SectionHeader title="Alertas prioritarias" description="Alertas derivadas del estado de integración." />
       <div className="stack-list">
         {priorityAlerts.map((alert) => (
           <article className="priority-alert" key={alert.id}>
@@ -182,7 +285,7 @@ function HistoryPanel({ history }) {
 
   return (
     <div className="panel panel--history">
-      <SectionHeader title="Historial reciente" description="Eventos entregados por el BFF." />
+      <SectionHeader title="Historial reciente" description="Eventos informados por BFF Gateway." />
       <div className="stack-list">
         {history.map((item) => (
           <article className="history-item" key={item.id}>
@@ -204,39 +307,40 @@ function HistoryPanel({ history }) {
   )
 }
 
-function HeatmapPanel({ rows }) {
-  if (!rows.length || rows.every((row) => row.values.length === 0)) return null
+function copyText(value, successMessage, onNotice) {
+  if (!navigator.clipboard) {
+    onNotice('No fue posible acceder al portapapeles en este navegador.', 'warning')
+    return
+  }
 
-  return (
-    <section className="panel panel--heatmap">
-      <SectionHeader title="Volumen de alertas por día" description="Datos entregados por el BFF Gateway." />
-      <div className="heatmap">
-        <div className="heatmap__grid">
-          {rows.map((row) => (
-            <div className="heatmap__row" key={row.id}>
-              <strong>{row.label}</strong>
-              {row.values.slice(0, 7).map((value, index) => (
-                <span
-                  className={`heatmap__cell heatmap__cell--${value > 10 ? 'high' : value > 5 ? 'mid' : value > 2 ? 'low' : value > 0 ? 'soft' : 'zero'}`}
-                  title={`${value} alertas`}
-                  key={`${row.id}-${index}`}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
+  void navigator.clipboard.writeText(value)
+    .then(() => onNotice(successMessage, 'success'))
+    .catch(() => onNotice('No fue posible copiar la información solicitada.', 'warning'))
 }
 
 export default function AlertsScreen() {
   const { data, loading, error, refetch } = useAlerts()
   const [activeTab, setActiveTab] = useState('todas')
   const [query, setQuery] = useState('')
+  const [selectedAlert, setSelectedAlert] = useState(null)
+  const [openMenuId, setOpenMenuId] = useState(null)
+  const [reviewedIds, setReviewedIds] = useState([])
+  const [notice, setNotice] = useState(null)
 
-  const alerts = data?.alertas || []
+  const baseAlerts = data?.alertas ?? EMPTY_ALERTS
+  const alerts = useMemo(() => baseAlerts.map((alert) => {
+    if (!reviewedIds.includes(alert.id)) return alert
+
+    return {
+      ...alert,
+      status: 'info',
+      statusLabel: 'En seguimiento',
+      reviewed: true,
+    }
+  }), [baseAlerts, reviewedIds])
   const visibleAlerts = useMemo(() => filterAlerts(alerts, activeTab, query), [alerts, activeTab, query])
+  const history = useMemo(() => sortByDateDesc(alerts).slice(0, 5), [alerts])
+  const metrics = useMemo(() => buildMetrics(alerts), [alerts])
 
   if (loading) {
     return <AlertsLoadingState />
@@ -246,11 +350,21 @@ export default function AlertsScreen() {
     return <AlertsErrorState error={error} onRetry={refetch} />
   }
 
-  if (alerts.length === 0) {
-    return <AlertsEmptyState onRetry={refetch} />
+  const showNotice = (message, tone = 'info') => {
+    setNotice({ message, tone })
   }
-
-  const metrics = buildMetrics(alerts)
+  const handleToggleMenu = (alertId) => {
+    setOpenMenuId((currentId) => (currentId === alertId ? null : alertId))
+  }
+  const handleView = (alert) => {
+    setSelectedAlert(alert)
+    setOpenMenuId(null)
+  }
+  const handleMarkReviewed = (alert) => {
+    setReviewedIds((currentIds) => currentIds.includes(alert.id) ? currentIds : [...currentIds, alert.id])
+    setOpenMenuId(null)
+    showNotice('Alerta marcada como revisada en esta sesión.', 'success')
+  }
 
   return (
     <main className="screen screen--alerts">
@@ -259,6 +373,14 @@ export default function AlertsScreen() {
           <MetricCard key={metric.title} {...metric} />
         ))}
       </section>
+
+      {notice && (
+        <section className={`alerts-notice alerts-notice--${notice.tone}`} role="status">
+          <AppIcon name={notice.tone === 'success' ? 'checkCircle' : 'warning'} size={17} strokeWidth={2} />
+          <span>{notice.message}</span>
+          <button type="button" onClick={() => setNotice(null)} aria-label="Cerrar aviso">Cerrar</button>
+        </section>
+      )}
 
       <section className="alerts-toolbar" aria-label="Filtros de alertas">
         <div className="tab-list">
@@ -291,33 +413,46 @@ export default function AlertsScreen() {
 
       <section className="content-grid content-grid--alerts" aria-label="Listado de alertas">
         <div className="panel panel--alerts-list">
+          <SectionHeader title="Eventos operacionales" description="Eventos informados por BFF Gateway." />
           {visibleAlerts.length > 0 ? (
             <>
               <div className="alerts-card-list">
                 {visibleAlerts.map((alert) => (
-                  <AlertItem table alert={alert} key={alert.id} />
+                  <AlertItem
+                    table
+                    alert={alert}
+                    key={alert.id}
+                    isMenuOpen={openMenuId === alert.id}
+                    onView={() => handleView(alert)}
+                    onToggleMenu={() => handleToggleMenu(alert.id)}
+                    onCopyDescription={() => {
+                      setOpenMenuId(null)
+                      copyText(alert.description, 'Descripción copiada al portapapeles.', showNotice)
+                    }}
+                    onCopyOrigin={() => {
+                      setOpenMenuId(null)
+                      copyText(alert.origin, 'Origen copiado al portapapeles.', showNotice)
+                    }}
+                    onMarkReviewed={() => handleMarkReviewed(alert)}
+                  />
                 ))}
               </div>
               <div className="table-footer">
-                <span>Mostrando 1 a {visibleAlerts.length} de {alerts.length} alertas</span>
+                <span>Mostrando {visibleAlerts.length} de {alerts.length} eventos</span>
               </div>
             </>
           ) : (
-            <div className="alerts-empty-inline">
-              <AppIcon name="search" size={22} strokeWidth={2} />
-              <strong>Sin resultados para los filtros actuales</strong>
-              <span>Ajusta el criterio de búsqueda o cambia la categoría seleccionada.</span>
-            </div>
+            <AlertsEmptyInline activeTab={activeTab} />
           )}
         </div>
 
         <aside className="side-stack">
           <PriorityPanel alerts={alerts} />
-          <HistoryPanel history={data?.historial || []} />
+          <HistoryPanel history={history} />
         </aside>
       </section>
 
-      <HeatmapPanel rows={data?.heatmap || []} />
+      <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
     </main>
   )
 }

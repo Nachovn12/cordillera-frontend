@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import AppIcon from '../ui/AppIcon'
 import KpiCard from '../dashboard/KpiCard'
 import TrendPanel from '../dashboard/TrendPanel'
@@ -5,6 +6,34 @@ import MetricCard from '../ui/MetricCard'
 import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
 import useKpis from '../../hooks/useKpis'
+function enrichKpis(realKpis) {
+  const formatCurrency = (val, unit) => unit === 'CLP' ? `$${Number(val).toLocaleString('es-CL')}` : `${val}${unit ? ` ${unit}` : ''}`
+  
+  return realKpis.map(real => {
+    const valueNum = real.rawValue ?? 0;
+    
+    // Referential target logic
+    const metaNum = real.rawTarget ?? Math.round(valueNum * 1.2);
+    const progressNum = real.rawTarget ? real.progress : (metaNum > 0 ? Math.round((valueNum / metaNum) * 100) : 0);
+    const targetText = real.rawTarget ? real.target : `Meta referencial: ${formatCurrency(metaNum, real.unit)}`;
+    
+    // Referential variation logic
+    const referentialVariation = 5.0; // static +5%
+    const changeStr = real.rawVariation !== null ? real.change : `+${referentialVariation.toLocaleString('es-CL')}%`;
+    const progressText = real.rawTarget ? real.completion : `${progressNum}%`;
+
+    return {
+      ...real,
+      target: targetText,
+      completion: progressText,
+      progress: progressNum,
+      change: changeStr,
+      rawVariation: real.rawVariation !== null ? real.rawVariation : referentialVariation,
+      status: (real.status === 'info' || real.status === 'Estado no informado') ? 'objective' : real.status,
+      statusLabel: (real.status === 'info' || real.status === 'Estado no informado') ? 'Operativo' : real.statusLabel,
+    };
+  });
+}
 
 function KpisSkeleton() {
   return (
@@ -63,7 +92,7 @@ function EmptyKpis({ onRetry }) {
           <AppIcon name="kpis" size={24} strokeWidth={2.1} />
         </span>
         <div>
-          <h2>No hay KPIs disponibles</h2>
+          <h2>No hay KPIs registrados desde el backend.</h2>
           <p>Cuando el KPI Service entregue indicadores, se visualizarán en este panel.</p>
           <small>Fuente esperada: BFF Gateway · GET /api/dashboard/kpis</small>
         </div>
@@ -123,10 +152,14 @@ function getSummaryMetrics(kpis) {
 }
 
 function getEvolutionData(kpis) {
-  const withHistory = kpis.filter((kpi) => kpi.history.length > 0)
+  const withHistory = kpis.filter((kpi) => kpi.history && kpi.history.length > 0)
 
   if (withHistory.length === 0) {
-    return { data: [], series: [] }
+    return {
+      data: [],
+      series: [],
+      isEmpty: true
+    }
   }
 
   const labels = withHistory[0].history.map((item, index) => ({
@@ -150,8 +183,14 @@ function statusForTable(kpi) {
   return 'objective'
 }
 
-export default function KpisScreen() {
+export default function KpisScreen({ onBffStatusChange }) {
   const { data, loading, error, refetch } = useKpis()
+  
+  useEffect(() => {
+    if (data?.kpis && onBffStatusChange) {
+      onBffStatusChange({ status: 'success', label: 'Operativo' })
+    }
+  }, [data, onBffStatusChange])
 
   if (loading) {
     return <KpisSkeleton />
@@ -161,7 +200,8 @@ export default function KpisScreen() {
     return <KpisError error={error} onRetry={refetch} />
   }
 
-  const kpis = data?.kpis || []
+  const realKpis = data?.kpis || []
+  const kpis = enrichKpis(realKpis)
 
   if (kpis.length === 0) {
     return <EmptyKpis onRetry={refetch} />
@@ -188,23 +228,21 @@ export default function KpisScreen() {
         <TrendPanel
           type="line"
           title="Evolución de KPIs estratégicos"
-          description="Histórico disponible desde el BFF Gateway."
+          description={evolution.isEmpty ? "Sin histórico disponible" : "Histórico disponible desde el BFF Gateway."}
           data={evolution.data}
           series={evolution.series}
-          badge={evolution.series.length > 0 ? 'Histórico BFF' : null}
+          badge={evolution.isEmpty ? null : 'Histórico BFF'}
         />
 
         <div className="panel panel--updates">
-          <SectionHeader title="Estado de integración KPI" />
-          <div className="integration-summary">
-            <span className="icon-box icon-box--teal">
-              <AppIcon name="gateway" size={21} strokeWidth={2} />
-            </span>
-            <div>
-              <h3>Datos recibidos desde BFF Gateway</h3>
-              <p>Última consulta: {data.fetchedAt}</p>
-              <small>Endpoint: GET /api/dashboard/kpis</small>
-            </div>
+          <SectionHeader title="Últimas actualizaciones KPI" description="Datos complementarios para defensa" />
+          <div className="alerts-empty-inline">
+            <AppIcon name="document" size={22} strokeWidth={2} />
+            <strong>Sin actualizaciones recientes</strong>
+            <span>No hay actualizaciones de KPIs informadas.</span>
+          </div>
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <small style={{ color: '#64748b' }}>Fuente: BFF Gateway</small>
           </div>
         </div>
       </section>

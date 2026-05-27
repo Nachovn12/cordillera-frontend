@@ -2,7 +2,7 @@ export const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { id: 'kpis', label: 'KPIs', icon: 'kpis' },
   { id: 'reports', label: 'Reportes', icon: 'reports' },
-  { id: 'alerts', label: 'Alertas', icon: 'alerts', badge: 2 },
+  { id: 'alerts', label: 'Alertas', icon: 'alerts' },
   { id: 'services', label: 'Servicios', icon: 'services' },
   { id: 'settings', label: 'Configuración', icon: 'settings' },
 ]

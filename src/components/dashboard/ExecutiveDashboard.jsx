@@ -51,18 +51,12 @@ function DashboardError({ error, onRetry }) {
           </div>
           <div className="error-hero__content">
             <span className="integration-status-badge integration-status-badge--danger">BFF Gateway sin conexión</span>
-            <h2>Conexión con BFF Gateway pendiente</h2>
-            <p>
-              El frontend está operativo, pero aún no recibe datos consolidados desde el Backend For Frontend.
-            </p>
-            <small>
-              Levanta el BFF Gateway en http://localhost:8081 para habilitar los indicadores ejecutivos.
-            </small>
+            <h2>No fue posible cargar la información del dashboard</h2>
+            <p>El frontend está operativo, pero no recibió respuesta válida desde el BFF Gateway.</p>
+            <small>Levanta el BFF Gateway en http://localhost:8081 para habilitar los indicadores ejecutivos.</small>
             <details>
               <summary>Detalle técnico</summary>
-              <span>
-                {error?.message || 'No fue posible conectar con BFF Gateway en http://localhost:8081'}
-              </span>
+              <span>{error?.message || 'No fue posible conectar con BFF Gateway en http://localhost:8081'}</span>
             </details>
             <div className="error-hero__actions">
               <button
@@ -89,7 +83,7 @@ function DashboardError({ error, onRetry }) {
           </span>
           <div>
             <h3>Checklist de habilitación</h3>
-            <p>Ayuda técnica secundaria para restablecer el flujo Frontend → BFF Gateway → Microservicios.</p>
+            <p>Ayuda técnica secundaria para restablecer el flujo Frontend {'->'} BFF Gateway {'->'} Microservicios.</p>
           </div>
         </div>
         <ol className="error-checklist error-checklist--compact">
@@ -100,7 +94,7 @@ function DashboardError({ error, onRetry }) {
                 <AppIcon name={icon} size={17} strokeWidth={2} />
               </span>
               <strong>{label}</strong>
-              <em className="error-checklist__status">Pendiente</em>
+              <em className="error-checklist__status">Por validar</em>
             </li>
           ))}
         </ol>
@@ -125,26 +119,26 @@ function buildSummaryMetrics(data) {
       value: formatClp(data.ventasTotales),
       detail: data.ventasTotales === undefined || data.ventasTotales === null
         ? 'Sin datos disponibles'
-        : 'Consolidado desde BFF',
+        : 'Fuente: BFF Gateway',
       icon: 'sales',
     },
     {
       title: 'KPIs monitoreados',
       value: String(data.kpis.length),
-      detail: data.kpis.length === 1 ? 'Indicador disponible' : 'Indicadores disponibles',
+      detail: 'Última lectura disponible',
       icon: 'kpis',
     },
     {
       title: 'Alertas activas',
       value: String(data.alertas.length),
-      detail: data.alertas.length === 1 ? 'Requiere revisión' : 'Requieren revisión',
+      detail: data.alertas.length > 0 ? 'Requiere revisión' : 'Sin alertas críticas',
       icon: 'alerts',
       tone: data.alertas.length > 0 ? 'warning' : 'success',
     },
     {
       title: 'Estado BFF',
       value: data.bffStatus.label,
-      detail: 'Informado por Gateway',
+      detail: 'Consolidado desde servicios internos',
       icon: 'shield',
       tone: data.bffStatus.status === 'danger' ? 'critical' : data.bffStatus.status,
     },
@@ -235,15 +229,15 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
       <section className="content-grid content-grid--dashboard content-grid--dashboard-main">
         <TrendPanel
           title="Tendencia de ventas"
-          description="Evolucion mensual consolidada desde el BFF Gateway."
+          description="Evolución mensual consolidada desde el BFF Gateway."
           data={data.salesTrend}
-          badge={data.salesTrend.length > 0 ? 'Historico BFF' : null}
+          badge={data.salesTrend.length > 0 ? 'Histórico BFF' : null}
         />
 
         <div className="panel panel--dashboard-reports">
           <SectionHeader
             title="Reportes recientes"
-            description="Reportes recientes se habilitarán al conectar report-service vía BFF."
+            description="Últimos reportes ejecutivos entregados por el BFF Gateway."
             action="Ver todos los reportes"
           />
           {data.recentReports.length > 0 ? (
@@ -254,8 +248,8 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
             </div>
           ) : (
             <EmptyState
-              title="Sin reportes recientes"
-              description="El BFF no entrego reportes recientes para esta consulta."
+              title="No hay reportes recientes disponibles."
+              description="El BFF no entregó reportes recientes para esta consulta."
             />
           )}
         </div>
@@ -272,11 +266,17 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
               {data.alertas.map((alert) => (
                 <AlertItem alert={alert} key={alert.id} />
               ))}
+              {data.alertas.length <= 1 && (
+                <div className="dashboard-safe-note">
+                  <AppIcon name="checkCircle" size={16} strokeWidth={2} />
+                  <span>Sin alertas críticas adicionales.</span>
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState
               title="Sin alertas activas"
-              description="El BFF no entregó alertas para esta consulta."
+              description="Sin alertas críticas adicionales."
             />
           )}
         </div>
