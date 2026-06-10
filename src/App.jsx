@@ -19,13 +19,29 @@ const screenComponents = {
   settings: SettingsScreen,
 };
 
+// Mapeo de ruta pathname → screenId
+const pathToScreen = {
+  "/":          "dashboard",
+  "/dashboard": "dashboard",
+  "/kpis":      "kpis",
+  "/reports":   "reports",
+  "/alerts":    "alerts",
+  "/services":  "services",
+  "/settings":  "settings",
+};
+
 function getInitialScreen() {
   if (typeof window === "undefined") return "dashboard";
 
-  const requestedScreen = new URLSearchParams(window.location.search).get(
-    "screen",
-  );
-  return screenComponents[requestedScreen] ? requestedScreen : "dashboard";
+  // Soporte de compatibilidad: si llega con ?screen=xxx lo redirigimos a la ruta limpia
+  const legacyScreen = new URLSearchParams(window.location.search).get("screen");
+  if (legacyScreen && screenComponents[legacyScreen]) {
+    window.history.replaceState(null, "", "/" + legacyScreen);
+    return legacyScreen;
+  }
+
+  const screenId = pathToScreen[window.location.pathname];
+  return screenId ?? "dashboard";
 }
 
 export default function App() {
@@ -38,6 +54,17 @@ export default function App() {
   const ActiveScreen = screenComponents[activeScreen];
 
   const activeMeta = useMemo(() => screenMeta[activeScreen], [activeScreen]);
+
+  // Sincroniza el estado cuando el usuario usa el botón Atrás/Adelante del navegador
+  useState(() => {
+    const onPopState = () => {
+      const screenId = pathToScreen[window.location.pathname] ?? "dashboard";
+      setActiveScreen(screenId);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  });
+
   const handleRefresh = () => {
     if (activeScreen === "dashboard") {
       setDashboardRefreshToken((current) => current + 1);
@@ -46,10 +73,8 @@ export default function App() {
 
   const handleNavigate = (screenId) => {
     setActiveScreen(screenId);
-
-    const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set("screen", screenId);
-    window.history.replaceState(null, "", nextUrl);
+    // Ruta limpia: /dashboard, /kpis, /reports, etc.
+    window.history.pushState(null, "", "/" + screenId);
   };
 
   return (
