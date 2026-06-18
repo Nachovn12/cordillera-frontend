@@ -169,6 +169,33 @@ export function normalizeKpisResponse(payload) {
   };
 }
 
+export async function createKpi(payload) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/kpis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`BFF Gateway respondió con estado HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Tiempo de espera agotado al conectar con BFF Gateway en ${API_BASE_URL}`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function getKpis() {
   let response;
   const controller = new AbortController();

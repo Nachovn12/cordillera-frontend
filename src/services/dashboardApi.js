@@ -287,6 +287,33 @@ export function normalizeDashboardStats(payload = {}) {
   };
 }
 
+export async function getDashboardBySucursal(sucursalId) {
+  let response;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/dashboard/sucursal/${encodeURIComponent(sucursalId)}`,
+      { signal: controller.signal },
+    );
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`Tiempo de espera agotado al conectar con BFF Gateway en ${API_BASE_URL}`);
+    }
+    throw new Error(`No fue posible conectar con BFF Gateway en ${API_BASE_URL}`);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    throw new Error(`BFF Gateway respondió con estado HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return normalizeDashboardStats(payload);
+}
+
 export async function getDashboardStats() {
   let response;
   const controller = new AbortController();

@@ -12,7 +12,7 @@
  * el estado desde el contexto y "observan" actualizaciones de manera reactiva.
  */
 import { createContext, useCallback, useContext, useReducer } from 'react'
-import { getDashboardStats } from '../services/dashboardApi'
+import { getDashboardStats, getDashboardBySucursal } from '../services/dashboardApi'
 import { getKpis } from '../services/kpisApi'
 import { getReportes } from '../services/reportsApi'
 import { getAlertas } from '../services/alertsApi'
@@ -103,6 +103,17 @@ export function DashboardProvider({ children }) {
     }
   }, [])
 
+  /** Filtra el dashboard por sucursal específica. */
+  const fetchDashboardBySucursal = useCallback(async (sucursalId) => {
+    dispatch({ type: DASHBOARD_FETCH_START })
+    try {
+      const data = await getDashboardBySucursal(sucursalId)
+      dispatch({ type: DASHBOARD_FETCH_SUCCESS, payload: data })
+    } catch (error) {
+      dispatch({ type: DASHBOARD_FETCH_ERROR, payload: error })
+    }
+  }, [])
+
   /** Notifica a todos los Observers que los KPIs se están actualizando. */
   const fetchKpis = useCallback(async () => {
     dispatch({ type: KPIS_FETCH_START })
@@ -144,6 +155,7 @@ export function DashboardProvider({ children }) {
     alertas:   state.alertas,
     // Acciones para disparar actualizaciones
     fetchDashboard,
+    fetchDashboardBySucursal,
     fetchKpis,
     fetchReportes,
     fetchAlertas,

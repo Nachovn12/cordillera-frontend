@@ -2,9 +2,9 @@ export const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { id: 'kpis', label: 'KPIs', icon: 'kpis' },
   { id: 'reports', label: 'Reportes', icon: 'reports' },
-  { id: 'alerts', label: 'Alertas', icon: 'alerts' },
+  { id: 'datos', label: 'Datos', icon: 'database' },
   { id: 'services', label: 'Servicios', icon: 'services' },
-  { id: 'settings', label: 'Configuración', icon: 'settings' },
+  { id: 'users', label: 'Usuarios', icon: 'users' },
 ]
 
 export const screenMeta = {
@@ -20,13 +20,21 @@ export const screenMeta = {
     title: 'Centro de Reportes',
     subtitle: 'Genera, consulta y exporta reportes ejecutivos para la toma de decisiones estratégicas.',
   },
-  alerts: {
-    title: 'Centro de Alertas',
-    subtitle: 'Monitorea eventos operacionales y recibe notificaciones críticas en tiempo real.',
+  datos: {
+    title: 'Integración de Datos',
+    subtitle: 'Ingesta manual y consulta de datos operacionales por sistema de origen.',
   },
   services: {
     title: 'Estado de Servicios',
     subtitle: 'Monitoreo de la salud y disponibilidad de los microservicios de la plataforma.',
+  },
+  users: {
+    title: 'Gestión de Usuarios',
+    subtitle: 'Administra los usuarios con acceso a la plataforma ejecutiva. GET y POST /api/auth/usuarios.',
+  },
+  alerts: {
+    title: 'Centro de Alertas',
+    subtitle: 'Monitorea eventos operacionales y recibe notificaciones críticas en tiempo real.',
   },
   settings: {
     title: 'Configuración',
