@@ -290,7 +290,7 @@ function GenerateReportModal({ form, actionLoading, onChange, onClose, onSubmit 
             </select>
           </label>
           <label className="report-form-field">
-            <span>AÃ±o</span>
+            <span>Año</span>
             <select name="anio" value={form.anio} onChange={onChange} required>
               {ANIO_OPTIONS.map((anio) => (
                 <option value={anio} key={anio}>{anio}</option>
@@ -867,7 +867,7 @@ export default function ReportsScreen() {
         showNotice('No fue posible generar el reporte desde Report Service.', 'warning')
       })
   }
-  
+
   const handleExport = (id, format) => {
     void exportar(id, format).then(() => {
       showNotice('Exportación real solicitada', 'success')
