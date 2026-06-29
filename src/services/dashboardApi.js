@@ -181,6 +181,8 @@ function normalizeService(service, index) {
       service.descripcion,
       "Estado informado por BFF",
     ),
+    latency: getFirstDefined(service.latenciaMs, service.latency, null),
+    uptime: getFirstDefined(service.disponibilidad, service.uptime, null),
   };
 }
 

@@ -7,8 +7,11 @@ export const defaultLocalSettings = {
   density: 'confortable',
   currency: 'CLP',
   language: 'es-CL',
-  defaultPeriod: 'Mayo 2026',
-  defaultBranch: 'Todas las sucursales',
+  defaultPeriod: 'Julio 2026',
+  compactMode: false,
+  autoRefresh: false,
+  refreshInterval: '60000',
+  defaultBranch: 'todas',
 }
 
 function readStoredSettings() {

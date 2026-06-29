@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import AppIcon from '../ui/AppIcon'
 import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
 import MetricCard from '../ui/MetricCard'
-import { getDatos, getDatosBySistema, createDato, SISTEMAS_ORIGEN } from '../../services/datosApi'
+import { getDatos, getDatosBySucursal, createDato, SISTEMAS_ORIGEN } from '../../services/datosApi'
 
 const INITIAL_FORM = {
   sistemaOrigen: 'POS',
@@ -152,28 +152,52 @@ function ManualLoadModal({ form, loading, notice, onChange, onClose, onSubmit })
   )
 }
 
-export default function DataScreen() {
+export default function DataScreen({ refreshToken = 0, onBffStatusChange, sucursal = 'todas' }) {
   const [datos, setDatos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [filterSistema, setFilterSistema] = useState('todos')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState(INITIAL_FORM)
   const [actionLoading, setActionLoading] = useState(false)
   const [notice, setNotice] = useState(null)
   const [toast, setToast] = useState(null)
+  const prevSucursal = useRef(sucursal)
 
-  function loadDatos(sistema) {
-    setLoading(true)
-    setError(null)
-    const fetch = sistema === 'todos' ? getDatos() : getDatosBySistema(sistema)
-    fetch
-      .then(setDatos)
-      .catch(setError)
-      .finally(() => setLoading(false))
-  }
+  const [filterSistema, setFilterSistema] = useState('todos')
 
-  useEffect(() => { loadDatos('todos') }, [])
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      // Fetch by Sucursal or All
+      let data = sucursal === 'todas' ? await getDatos() : await getDatosBySucursal(sucursal)
+      
+      // Local filter by Sistema
+      if (filterSistema !== 'todos') {
+        data = data.filter(d => d.sistemaOrigen === filterSistema)
+      }
+      
+      setDatos(data)
+      onBffStatusChange?.('Operativo')
+    } catch (err) {
+      setError(err)
+      onBffStatusChange?.('Error', err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [onBffStatusChange, sucursal, filterSistema])
+
+  useEffect(() => {
+    loadData()
+  }, [refreshToken, loadData])
+
+  useEffect(() => {
+    if (prevSucursal.current !== sucursal) {
+      prevSucursal.current = sucursal
+      setFilterSistema('todos') // Reset local filter when sucursal changes
+      loadData()
+    }
+  }, [sucursal, loadData])
 
   useEffect(() => {
     if (!toast) return
@@ -182,14 +206,12 @@ export default function DataScreen() {
   }, [toast])
 
   if (loading) return <DataSkeleton />
-  if (error) return <DataError error={error} onRetry={() => loadDatos(filterSistema)} />
+  if (error) return <DataError error={error} onRetry={loadData} />
 
   const metrics = buildMetrics(datos)
 
   const handleFilterChange = (e) => {
-    const value = e.target.value
-    setFilterSistema(value)
-    loadDatos(value)
+    setFilterSistema(e.target.value)
   }
 
   const handleFormChange = (e) => {
@@ -216,7 +238,7 @@ export default function DataScreen() {
           setShowModal(false)
           setForm(INITIAL_FORM)
           setNotice(null)
-          loadDatos(filterSistema)
+          loadData()
           setToast({ message: 'Dato cargado manualmente y sincronizado con Data Service.', tone: 'success' })
         }, 1000)
       })
@@ -266,7 +288,7 @@ export default function DataScreen() {
             <button
               className="secondary-button"
               type="button"
-              onClick={() => loadDatos(filterSistema)}
+              onClick={() => loadData()}
               aria-label="Forzar sincronización"
             >
               <AppIcon name="refresh" size={15} strokeWidth={2} />

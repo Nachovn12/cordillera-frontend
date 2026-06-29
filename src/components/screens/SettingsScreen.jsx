@@ -5,38 +5,15 @@ import useLocalSettings from '../../hooks/useLocalSettings'
 import useRemoteSettings from '../../hooks/useRemoteSettings'
 
 const selectOptions = {
-  theme: [
-    ['claro', 'Claro'],
-    ['oscuro', 'Oscuro'],
-    ['sistema', 'Sistema'],
-  ],
-  density: [
-    ['confortable', 'Confortable'],
-    ['compacto', 'Compacto'],
-  ],
-  currency: [['CLP', 'CLP - Peso chileno']],
-  language: [['es-CL', 'Español (Chile)']],
   defaultPeriod: [
-    ['Mayo 2026', 'Mayo 2026'],
+    ['Julio 2026', 'Julio 2026'],
     ['Mes actual', 'Mes actual'],
   ],
   defaultBranch: [
-    ['Todas las sucursales', 'Todas las sucursales'],
-    ['Casa matriz', 'Casa matriz'],
+    ['todas', 'Todas las sucursales'],
+    ['1', 'Casa matriz (Santiago)'],
   ],
 }
-
-const pendingModules = [
-  ['users', 'Usuarios y roles pendientes', 'Perfiles y permisos se mostrarán cuando el BFF entregue configuración real.'],
-  ['layers', 'Integraciones pendientes', 'Canales y conectores quedarán disponibles desde configuración remota.'],
-  ['services', 'Estado de servicios pendiente', 'La salud operativa se consulta desde endpoints reales, no desde datos simulados.'],
-]
-
-const scopeCards = [
-  ['settings', 'Local', 'Preferencias visuales guardadas en el navegador.', 'Disponible', 'success'],
-  ['gateway', 'Remota', 'Parámetros administrativos expuestos por el BFF Gateway.', 'Pendiente', 'pending'],
-  ['network', 'Integraciones', 'Usuarios, roles y servicios conectados cuando exista configuración remota.', 'Pendiente', 'pending'],
-]
 
 function LocalSelectRow({ id, label, value, options, onChange }) {
   return (
@@ -130,67 +107,13 @@ function RemotePendingCard({ error, onRetry, empty = false }) {
   )
 }
 
-function LockedRemoteCards() {
-  return (
-    <section className="settings-locked-grid" aria-label="Módulos pendientes de configuración remota">
-      {pendingModules.map(([icon, title, description]) => (
-        <article className="settings-module-card" key={title}>
-          <div className="settings-module-card__top">
-            <span className="icon-box icon-box--info">
-              <AppIcon name={icon} size={19} strokeWidth={2} />
-            </span>
-            <StatusBadge status="pending" label="Pendiente" />
-          </div>
-          <h3>{title}</h3>
-          <p>{description}</p>
-          <small>Requiere BFF Gateway</small>
-        </article>
-      ))}
-    </section>
-  )
-}
-
-function RemoteList({ title, description, items, icon }) {
-  if (!items.length) return null
-
-  return (
-    <section className="panel settings-panel">
-      <div className="settings-section-heading">
-        <AppIcon name={icon} size={18} strokeWidth={2} />
-        <div>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-      </div>
-      <div className="integration-list settings-remote-list">
-        {items.map((item) => (
-          <article key={item.id}>
-            <AppIcon name={icon} size={20} strokeWidth={2} />
-            <div>
-              <strong>{item.title}</strong>
-              {item.description && <p>{item.description}</p>}
-            </div>
-            <StatusBadge status="info" label={String(item.status)} />
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
 function RemoteSuccessBlock({ data, onRetry, onSave, saving }) {
-  const hasRemoteData =
-    Boolean(data?.parameters)
-    || data.integrations.length > 0
-    || data.users.length > 0
-    || data.roles.length > 0
-    || data.services.length > 0
+  const hasRemoteData = Boolean(data?.parameters)
 
   if (!hasRemoteData) {
     return (
       <div className="settings-remote-stack">
         <RemotePendingCard onRetry={onRetry} empty />
-        <LockedRemoteCards />
       </div>
     )
   }
@@ -213,39 +136,7 @@ function RemoteSuccessBlock({ data, onRetry, onSave, saving }) {
           {saving ? 'Guardando' : 'Sincronizar configuración remota'}
         </button>
       </section>
-      <RemoteList title="Integraciones reales" description="Datos entregados por GET /api/configuracion." items={data.integrations} icon="layers" />
-      <RemoteList title="Usuarios" description="Usuarios recibidos desde BFF." items={data.users} icon="users" />
-      <RemoteList title="Roles y permisos" description="Roles recibidos desde BFF." items={data.roles} icon="lock" />
-      <RemoteList title="Estado de servicios" description="Servicios recibidos desde configuración remota." items={data.services} icon="services" />
     </div>
-  )
-}
-
-function ScopeSection() {
-  return (
-    <section className="settings-scope">
-      <div className="settings-section-heading">
-        <AppIcon name="target" size={18} strokeWidth={2} />
-        <div>
-          <h2>Alcance de configuración</h2>
-          <p>Separación explícita entre ajustes locales y capacidades dependientes del BFF Gateway.</p>
-        </div>
-      </div>
-      <div className="settings-scope-grid">
-        {scopeCards.map(([icon, title, description, label, status]) => (
-          <article className="settings-scope-card" key={title}>
-            <span className={`icon-box icon-box--${status === 'success' ? 'teal' : 'info'}`}>
-              <AppIcon name={icon} size={19} strokeWidth={2} />
-            </span>
-            <div>
-              <h3>{title}</h3>
-              <p>{description}</p>
-            </div>
-            <StatusBadge status={status} label={label} />
-          </article>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -282,15 +173,7 @@ export default function SettingsScreen() {
             </div>
           </div>
 
-          <SettingsGroup title="Apariencia" icon="settings">
-            <LocalSelectRow id="theme" label="Tema visual" value={settings.theme} options={selectOptions.theme} onChange={updateSetting} />
-            <LocalSelectRow id="density" label="Densidad de interfaz" value={settings.density} options={selectOptions.density} onChange={updateSetting} />
-          </SettingsGroup>
 
-          <SettingsGroup title="Localización" icon="store">
-            <LocalSelectRow id="currency" label="Moneda" value={settings.currency} options={selectOptions.currency} onChange={updateSetting} />
-            <LocalSelectRow id="language" label="Idioma" value={settings.language} options={selectOptions.language} onChange={updateSetting} />
-          </SettingsGroup>
 
           <SettingsGroup title="Contexto inicial" icon="calendar">
             <LocalSelectRow id="defaultPeriod" label="Periodo por defecto" value={settings.defaultPeriod} options={selectOptions.defaultPeriod} onChange={updateSetting} />
@@ -315,7 +198,6 @@ export default function SettingsScreen() {
           {!loading && error && (
             <div className="settings-remote-stack">
               <RemotePendingCard error={error} onRetry={refetch} />
-              <LockedRemoteCards />
             </div>
           )}
           {!loading && !error && data && (
@@ -324,7 +206,7 @@ export default function SettingsScreen() {
         </div>
       </section>
 
-      <ScopeSection />
+
     </main>
   )
 }

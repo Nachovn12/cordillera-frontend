@@ -2,10 +2,19 @@ import { useEffect, useState } from "react";
 import { getUsuarios, createUsuario, deleteUsuario } from "../../services/usersApi";
 import AppIcon from "../ui/AppIcon";
 import SectionHeader from "../ui/SectionHeader";
+import MetricCard from "../ui/MetricCard";
 
 const ROLES = ["GERENTE_GENERAL", "ADMINISTRADOR", "ANALISTA", "OPERADOR"];
 
-const INITIAL_FORM = { usuario: "", contrasena: "", nombre: "", rol: "ANALISTA", area: "" };
+const INITIAL_FORM = { usuario: "", contrasena: "", nombre: "", rol: "ANALISTA", area: "", sucursalId: "" };
+
+const SUCURSALES = [
+  { id: '', label: 'Global (Todas)' },
+  { id: '1', label: 'Santiago' },
+  { id: '2', label: 'Valdivia' },
+  { id: '3', label: 'Concepción' },
+  { id: '4', label: 'Temuco' },
+];
 
 function UsuarioRow({ usuario, onDelete }) {
   return (
@@ -21,6 +30,11 @@ function UsuarioRow({ usuario, onDelete }) {
         </span>
       </td>
       <td>{usuario.area}</td>
+      <td>
+        <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+          {usuario.sucursalId ? SUCURSALES.find(s => s.id === String(usuario.sucursalId))?.label : "Global"}
+        </span>
+      </td>
       <td>
         <button
           type="button"
@@ -80,12 +94,18 @@ export default function UsersScreen() {
     }
   }
 
-  async function handleSubmit(e) {
+    async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
     setNotice(null);
     try {
-      await createUsuario(form);
+      const payload = { ...form };
+      if (payload.sucursalId === "") {
+        payload.sucursalId = null;
+      } else {
+        payload.sucursalId = parseInt(payload.sucursalId, 10);
+      }
+      await createUsuario(payload);
       setNotice({ type: "success", text: `Usuario ${form.usuario} creado correctamente.` });
       setForm(INITIAL_FORM);
       fetchUsuarios();
@@ -102,38 +122,31 @@ export default function UsersScreen() {
 
       {/* Resumen */}
       <div className="metric-grid metric-grid--four">
-        <article className="metric-card">
-          <div className="metric-card__icon-wrap"><AppIcon name="users" size={20} strokeWidth={2} /></div>
-          <div className="metric-card__body">
-            <span className="metric-card__title">Total usuarios</span>
-            <strong className="metric-card__value">{loading ? "—" : usuarios.length}</strong>
-          </div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-card__icon-wrap"><AppIcon name="shield" size={20} strokeWidth={2} /></div>
-          <div className="metric-card__body">
-            <span className="metric-card__title">Gerentes</span>
-            <strong className="metric-card__value">
-              {loading ? "—" : usuarios.filter((u) => u.rol === "GERENTE_GENERAL").length}
-            </strong>
-          </div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-card__icon-wrap"><AppIcon name="settings" size={20} strokeWidth={2} /></div>
-          <div className="metric-card__body">
-            <span className="metric-card__title">Administradores</span>
-            <strong className="metric-card__value">
-              {loading ? "—" : usuarios.filter((u) => u.rol === "ADMINISTRADOR").length}
-            </strong>
-          </div>
-        </article>
-        <article className="metric-card">
-          <div className="metric-card__icon-wrap"><AppIcon name="lock" size={20} strokeWidth={2} /></div>
-          <div className="metric-card__body">
-            <span className="metric-card__title">Endpoint</span>
-            <strong className="metric-card__value" style={{ fontSize: "0.78rem" }}>POST /api/auth/usuarios</strong>
-          </div>
-        </article>
+        <MetricCard
+          title="Total usuarios"
+          value={loading ? "—" : usuarios.length}
+          icon="users"
+          tone="primary"
+        />
+        <MetricCard
+          title="Gerentes"
+          value={loading ? "—" : usuarios.filter((u) => u.rol === "GERENTE_GENERAL").length}
+          icon="shield"
+          tone="warning"
+        />
+        <MetricCard
+          title="Administradores"
+          value={loading ? "—" : usuarios.filter((u) => u.rol === "ADMINISTRADOR").length}
+          icon="settings"
+          tone="secondary"
+        />
+        <MetricCard
+          title="Endpoint"
+          value="auth/usuarios"
+          detail="Método POST"
+          icon="lock"
+          tone="critical"
+        />
       </div>
 
       {/* Tabla */}
@@ -165,14 +178,15 @@ export default function UsersScreen() {
                 <th>Usuario (email)</th>
                 <th>Rol</th>
                 <th>Área</th>
+                <th>Sucursal</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: "center", color: "#94a3b8" }}>Cargando…</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: "center", color: "#94a3b8" }}>Cargando…</td></tr>
               ) : usuarios.length === 0 ? (
-                <tr><td colSpan={6} style={{ textAlign: "center", color: "#94a3b8" }}>Sin usuarios registrados.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: "center", color: "#94a3b8" }}>Sin usuarios registrados.</td></tr>
               ) : (
                 usuarios.map((u) => <UsuarioRow key={u.id} usuario={u} onDelete={handleDelete} />)
               )}
@@ -218,10 +232,17 @@ export default function UsersScreen() {
                   </select>
                 </div>
 
-                <div className="user-form__field user-form__field--full">
+                <div className="user-form__field">
                   <label htmlFor="uf-area">Área</label>
                   <input id="uf-area" type="text" name="area" value={form.area}
                     onChange={handleField} placeholder="Ej: Gerencia Comercial" required disabled={saving} />
+                </div>
+
+                <div className="user-form__field">
+                  <label htmlFor="uf-sucursal">Sucursal</label>
+                  <select id="uf-sucursal" name="sucursalId" value={form.sucursalId} onChange={handleField} disabled={saving}>
+                    {SUCURSALES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
                 </div>
 
               </div>

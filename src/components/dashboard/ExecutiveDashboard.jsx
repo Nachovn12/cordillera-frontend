@@ -161,7 +161,7 @@ function buildDisplayedServices(data) {
   ]
 }
 
-export default function ExecutiveDashboard({ data, error, loading, onRetry, sucursal }) {
+export default function ExecutiveDashboard({ data, error, loading, onRetry, sucursal, onNavigate }) {
   if (loading) {
     return <DashboardSkeleton />
   }
@@ -215,6 +215,7 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry, sucu
           title="Indicadores ejecutivos"
           description="KPIs consolidados desde BFF Gateway para evaluar desempeño comercial, inventario y rentabilidad."
           action="Ver todos los KPIs"
+          onActionClick={() => onNavigate?.('kpis')}
         />
         {data.kpis.length > 0 ? (
           <div className="kpi-grid">
@@ -235,7 +236,7 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry, sucu
           title="Tendencia de ventas"
           description="Evolución mensual consolidada desde el BFF Gateway."
           data={data.salesTrend}
-          badge={data.salesTrend.length > 0 ? 'Histórico BFF' : null}
+          type="line"
         />
 
         <div className="panel panel--dashboard-reports">
@@ -243,6 +244,7 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry, sucu
             title="Reportes recientes"
             description="Últimos reportes ejecutivos entregados por el BFF Gateway."
             action="Ver todos los reportes"
+            onActionClick={() => onNavigate?.('reports')}
           />
           {data.recentReports.length > 0 ? (
             <div className="stack-list">
@@ -264,6 +266,8 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry, sucu
           <SectionHeader
             title="Alertas operacionales"
             description="Eventos relevantes detectados en la operación del negocio."
+            action="Ver todas las alertas"
+            onActionClick={() => onNavigate?.('alerts')}
           />
           {data.alertas.length > 0 ? (
             <div className="stack-list">

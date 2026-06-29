@@ -1,4 +1,6 @@
-export default function TrendPanel({ title, description, data, type = 'bar', series, badge = '+12.8%' }) {
+import Chart from 'react-apexcharts'
+
+export default function TrendPanel({ title, description, data, type = 'bar', series, badge }) {
   const chartSeries =
     series ||
     (type === 'line'
@@ -7,7 +9,6 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
   const lineValues = chartSeries.flatMap((item) => item.values)
   const valuesForScale = lineValues.length ? lineValues : data.map((item) => item.value)
   const max = Math.max(...(valuesForScale.length ? valuesForScale : [1]), 1)
-  const min = Math.min(...(lineValues.length ? lineValues : [0]))
   const barMax = getNiceMax(max)
   const yAxisLabels = getYAxisLabels(barMax)
   const hasLineData = type === 'line' && data.length > 0 && chartSeries.some((item) => item.values.length > 0)
@@ -17,16 +18,7 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
   const average = data.length > 0 ? data.reduce((sum, item) => sum + item.value, 0) / data.length : 0
   const averagePosition = Math.min(Math.max((average / barMax) * 100, 0), 100)
 
-  const getPoints = (values) =>
-    values
-      .map((value, index) => {
-        const x = 30 + (index / Math.max(values.length - 1, 1)) * 940
-        const y = 170 - ((value - min) / Math.max(max - min, 1)) * 140
-        return `${x.toFixed(1)},${y.toFixed(1)}`
-      })
-      .join(' ')
-
-  const metaY = max > 0 ? 170 - ((100 - min) / Math.max(max - min, 1)) * 140 : 100
+  const displayBadge = badge || (hasLineData ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%` : null)
 
   return (
     <article className={`trend-panel trend-panel--${type}`}>
@@ -35,13 +27,33 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
           <h2>{title}</h2>
           {description && <p>{description}</p>}
         </div>
-        {badge && <strong>{badge}</strong>}
+        {displayBadge && (
+          <strong className={delta >= 0 ? 'is-positive' : 'is-negative'}>
+            {displayBadge}
+          </strong>
+        )}
       </div>
 
       {type === 'line' ? (
-        <div className="line-chart" style={{ '--label-count': Math.max(data.length, 1) }}>
+        <div className="bar-chart bar-chart--executive">
           {hasLineData ? (
             <>
+              <div className="bar-chart__summary">
+                <div>
+                  <span>Mes actual</span>
+                  <strong>{formatCompactCurrency(latestValue)}</strong>
+                </div>
+                <div>
+                  <span>Promedio</span>
+                  <strong>{formatCompactCurrency(average)}</strong>
+                </div>
+                <div>
+                  <span>Variación</span>
+                  <strong className={delta >= 0 ? 'is-positive' : 'is-negative'}>
+                    {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
+                  </strong>
+                </div>
+              </div>
               {chartSeries.length > 1 && (
                 <div className="line-chart__legend">
                   {chartSeries.map((item) => (
@@ -54,42 +66,68 @@ export default function TrendPanel({ title, description, data, type = 'bar', ser
                   </span>
                 </div>
               )}
-              <svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true">
-                {[30, 75, 120, 165].map((y) => (
-                  <line key={y} x1="30" y1={y} x2="970" y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                ))}
-                <line
-                  className="line-chart__meta"
-                  x1="30" y1={metaY.toFixed(1)}
-                  x2="970" y2={metaY.toFixed(1)}
+              <div className="mt-4" style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+                <Chart
+                  options={{
+                    chart: {
+                      type: 'area',
+                      height: '100%',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      toolbar: { show: false },
+                      zoom: { enabled: false },
+                    },
+                    colors: chartSeries.map(item => item.tone === 'orange' ? '#f97316' : item.tone === 'blue' ? '#2563eb' : '#0d9488'),
+                    fill: {
+                      type: 'gradient',
+                      gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.45,
+                        opacityTo: 0.05,
+                        stops: [0, 100]
+                      }
+                    },
+                    dataLabels: { enabled: false },
+                    stroke: {
+                      curve: 'smooth',
+                      width: 3
+                    },
+                    grid: {
+                      show: true,
+                      borderColor: '#f1f5f9',
+                      strokeDashArray: 4,
+                      xaxis: { lines: { show: false } },
+                      yaxis: { lines: { show: true } },
+                    },
+                    xaxis: {
+                      categories: data.map(item => item.label),
+                      labels: {
+                        style: { colors: '#64748b', fontSize: '12px', fontWeight: 500 }
+                      },
+                      axisBorder: { show: false },
+                      axisTicks: { show: false },
+                      tooltip: { enabled: false }
+                    },
+                    yaxis: {
+                      labels: {
+                        formatter: (val) => formatCompactCurrency(val),
+                        style: { colors: '#64748b', fontSize: '11px', fontWeight: 500 },
+                      }
+                    },
+                    tooltip: {
+                      y: { formatter: (val) => formatCompactCurrency(val) },
+                      theme: 'light'
+                    },
+                    legend: { show: false }
+                  }}
+                  series={chartSeries.map(item => ({
+                    name: item.name,
+                    data: item.values
+                  }))}
+                  type="area"
+                  height="220"
                 />
-                {chartSeries.map((item) => (
-                  <g key={item.name}>
-                    <polyline className={`line-chart__line line-chart__line--${item.tone}`} points={getPoints(item.values)} />
-                    {item.values.map((val, index) => {
-                      const x = 30 + (index / Math.max(item.values.length - 1, 1)) * 940
-                      const y = 170 - ((val - min) / Math.max(max - min, 1)) * 140
-                      return (
-                        <circle
-                          className="line-chart__point"
-                          cx={x.toFixed(1)}
-                          cy={y.toFixed(1)}
-                          fill="#fff"
-                          key={`${item.name}-${index}`}
-                          r="5"
-                          stroke={item.tone === 'orange' ? '#f97316' : item.tone === 'blue' ? '#2563eb' : '#0d9488'}
-                          strokeWidth="2.5"
-                        />
-                      )
-                    })}
-                  </g>
-                ))}
-              </svg>
-              <div className="line-chart__labels">
-                {data.map((item) => (
-                  <span key={item.label}>{item.label}</span>
-                ))}
               </div>
+
             </>
           ) : (
             <div className="empty-state empty-state--chart">

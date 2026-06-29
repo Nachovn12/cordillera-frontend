@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { DashboardProvider } from "./context/DashboardContext";
+import useLocalSettings from "./hooks/useLocalSettings";
 import AppShell from "./components/layout/AppShell";
 import AlertsScreen from "./components/screens/AlertsScreen";
 import DashboardScreen from "./components/screens/DashboardScreen";
@@ -59,7 +60,8 @@ export default function App() {
   const [activeScreen, setActiveScreen] = useState(getInitialScreen);
   const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
   const [bffStatus, setBffStatus] = useState({ status: "info", label: "Pendiente" });
-  const [sucursal, setSucursal] = useState("todas");
+  const { settings } = useLocalSettings();
+  const [sucursal, setSucursal] = useState(() => settings.defaultBranch || "todas");
 
   const activeMeta = useMemo(() => screenMeta[activeScreen], [activeScreen]);
 
@@ -100,6 +102,7 @@ export default function App() {
         navigationItems={navigationItems}
         onNavigate={handleNavigate}
         onRefresh={handleRefresh}
+        periodo={settings.defaultPeriod}
         sucursal={sucursal}
         onSucursalChange={setSucursal}
       >
@@ -107,6 +110,7 @@ export default function App() {
           refreshToken={dashboardRefreshToken}
           onBffStatusChange={setBffStatus}
           sucursal={sucursal}
+          onNavigate={handleNavigate}
         />
       </AppShell>
     </DashboardProvider>

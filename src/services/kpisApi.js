@@ -73,8 +73,8 @@ function normalizeStatus(value, completion) {
     return { status: "success", label: "En objetivo" };
   }
 
-  if (normalized.includes("activo") || normalized.includes("ok")) {
-    return { status: "success", label: "Activo" };
+  if (normalized.includes("activo") || normalized.includes("ok") || normalized.includes("operativo")) {
+    return { status: "success", label: "Operativo" };
   }
 
   if (completion !== null && completion < 100) {

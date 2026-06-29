@@ -34,7 +34,7 @@ function SucursalFilterCard({ sucursal, onChange }) {
   )
 }
 
-export default function Topbar({ bffStatus, meta, onRefresh, sucursal, onSucursalChange }) {
+export default function Topbar({ bffStatus, meta, onRefresh, periodo = 'Julio 2026', sucursal, onSucursalChange, onNavigate }) {
   return (
     <header className="topbar">
       <div className="topbar__heading">
@@ -44,7 +44,7 @@ export default function Topbar({ bffStatus, meta, onRefresh, sucursal, onSucursa
       </div>
 
       <div className="topbar__actions" aria-label="Filtros del módulo">
-        <FilterCard icon="calendar" label="Periodo" value="Mayo 2026" />
+        <FilterCard icon="calendar" label="Periodo" value={periodo} />
 
         {sucursal !== undefined && onSucursalChange ? (
           <SucursalFilterCard sucursal={sucursal} onChange={onSucursalChange} />
@@ -63,10 +63,15 @@ export default function Topbar({ bffStatus, meta, onRefresh, sucursal, onSucursa
           </span>
         </div>
 
+        <button className="topbar__alert" type="button" onClick={() => onNavigate?.('alerts')} title="Ver Alertas" aria-label="Alertas">
+          <AppIcon name="bell" size={22} strokeWidth={2} />
+        </button>
+
         <button className="topbar__refresh" type="button" onClick={onRefresh}>
           <AppIcon className="topbar-icon" name="refresh" size={20} strokeWidth={2.1} />
           Actualizar
         </button>
+
 
       </div>
     </header>

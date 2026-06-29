@@ -22,7 +22,7 @@ function CircuitBreakerToast({ onDismiss }) {
   );
 }
 
-export default function DashboardScreen({ refreshToken = 0, onBffStatusChange, sucursal = "todas" }) {
+export default function DashboardScreen({ refreshToken = 0, onBffStatusChange, sucursal = "todas", onNavigate }) {
   const { dashboard, fetchDashboard, fetchDashboardBySucursal } = useDashboardContext();
   const { data, loading, error } = dashboard;
   const didMount = useRef(false);
@@ -82,6 +82,7 @@ export default function DashboardScreen({ refreshToken = 0, onBffStatusChange, s
         error={error}
         loading={loading}
         sucursal={sucursal}
+        onNavigate={onNavigate}
         onRetry={() => {
           if (sucursal === "todas") fetchDashboard();
           else fetchDashboardBySucursal(sucursal);

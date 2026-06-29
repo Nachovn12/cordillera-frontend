@@ -62,6 +62,15 @@ export default function Sidebar({ activeScreen, items, onNavigate }) {
         </div>
         <button
           type="button"
+          className={`sidebar__action${activeScreen === 'settings' ? ' sidebar__action--active' : ''}`}
+          onClick={() => onNavigate('settings')}
+          title="Configuración"
+          aria-label="Configuración"
+        >
+          <AppIcon name="settings" size={16} strokeWidth={2} />
+        </button>
+        <button
+          type="button"
           className="sidebar__logout"
           onClick={handleLogout}
           title="Cerrar sesión"

@@ -9,6 +9,7 @@ export default function AppShell({
   navigationItems,
   onNavigate,
   onRefresh,
+  periodo,
   sucursal,
   onSucursalChange,
 }) {
@@ -21,8 +22,10 @@ export default function AppShell({
           bffStatus={bffStatus}
           meta={meta}
           onRefresh={onRefresh}
-          sucursal={activeScreen === 'dashboard' ? sucursal : undefined}
-          onSucursalChange={activeScreen === 'dashboard' ? onSucursalChange : undefined}
+          periodo={periodo}
+          sucursal={sucursal}
+          onSucursalChange={onSucursalChange}
+          onNavigate={onNavigate}
         />
         {children}
       </div>

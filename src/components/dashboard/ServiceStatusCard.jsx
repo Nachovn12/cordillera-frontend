@@ -32,11 +32,11 @@ export default function ServiceStatusCard({ service, compact = false }) {
         <div className="service-status-card__body">
           <div className="service-status-card__metrics">
             <div className="service-status-card__metric">
-              <strong>{service.uptimeLabel || service.uptime || 'Sin medición'}</strong>
+              <strong>{service.uptimeLabel || (service.uptime != null ? `${service.uptime}%` : 'Sin medición')}</strong>
               <span>Uptime</span>
             </div>
             <div className="service-status-card__metric">
-              <strong>{service.latencyLabel || service.latency || 'No medida'}</strong>
+              <strong>{service.latencyLabel || (service.latency != null ? `${service.latency} ms` : 'No medida')}</strong>
               <span>Latencia</span>
             </div>
           </div>

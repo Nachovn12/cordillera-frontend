@@ -52,6 +52,16 @@ export async function getDatosBySistema(sistemaOrigen) {
   return normalizeList(payload)
 }
 
+export async function getDatosBySucursal(sucursalId) {
+  const response = await requestWithTimeout(
+    `${API_BASE_URL}/api/v1/datos/sucursal/${encodeURIComponent(sucursalId)}`,
+  )
+  if (!response.ok) throw new Error(`BFF Gateway respondió con estado HTTP ${response.status}`)
+  const payload = await response.json()
+  return normalizeList(payload)
+}
+
+
 export async function createDato(payload) {
   const response = await requestWithTimeout(`${API_BASE_URL}/api/v1/datos`, {
     method: 'POST',

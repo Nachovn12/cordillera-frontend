@@ -34,15 +34,19 @@ function buildMetrics(data) {
     },
     {
       title: 'Tiempo promedio de respuesta',
-      value: 'No medido',
-      detail: 'Dato no entregado por BFF',
+      value: services.some(s => s.latency !== null)
+        ? `${Math.round(services.reduce((acc, s) => acc + (s.latency || 0), 0) / services.filter(s => s.latency !== null).length)} ms`
+        : 'No medido',
+      detail: services.some(s => s.latency !== null) ? 'Latencia de red interna' : 'Dato no entregado por BFF',
       icon: 'clock',
       tone: 'info',
     },
     {
       title: 'Disponibilidad promedio',
-      value: 'No medida',
-      detail: 'Sin histórico de uptime',
+      value: services.some(s => s.uptime !== null)
+        ? `${percentFormatter.format(services.reduce((acc, s) => acc + (s.uptime || 0), 0) / services.filter(s => s.uptime !== null).length)}%`
+        : 'No medida',
+      detail: services.some(s => s.uptime !== null) ? 'Uptime reportado' : 'Sin histórico de uptime',
       icon: 'shield',
       tone: 'info',
     },

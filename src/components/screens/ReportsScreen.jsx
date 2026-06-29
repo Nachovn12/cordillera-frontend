@@ -765,7 +765,7 @@ function SupportedFormatsPanel() {
   )
 }
 
-export default function ReportsScreen() {
+export default function ReportsScreen({ sucursal = 'todas' }) {
   const [filters, setFilters] = useState({
     area: 'todos',
     formato: 'todos',
@@ -928,6 +928,28 @@ export default function ReportsScreen() {
 
   return (
     <main className="screen screen--reports">
+      {sucursal !== 'todas' && (
+        <div style={{
+          backgroundColor: '#e0f2fe',
+          borderLeft: '4px solid #0284c7',
+          padding: '12px 16px',
+          marginBottom: '20px',
+          borderRadius: '4px',
+          color: '#0c4a6e',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <AppIcon name="info" size={20} strokeWidth={2} />
+          <div>
+            <strong>Métricas Corporativas Consolidadas</strong>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
+              Los reportes ejecutivos reflejan el desempeño global del Grupo Cordillera y no se filtran por sucursal.
+            </p>
+          </div>
+        </div>
+      )}
+
       <ReportsHero actionLoading={actionLoading} onGenerate={handleGenerate} />
 
       {actionError && (
