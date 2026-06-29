@@ -1,6 +1,23 @@
 import AppIcon from '../ui/AppIcon'
 
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem('authUser') || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function handleLogout() {
+  if (!window.confirm('¿Cerrar sesión?')) return
+  localStorage.removeItem('authToken')
+  localStorage.removeItem('authUser')
+  window.location.reload()
+}
+
 export default function Sidebar({ activeScreen, items, onNavigate }) {
+  const user = getUser()
+
   return (
     <aside className="sidebar" aria-label="Navegacion principal">
       <div className="sidebar__brand">
@@ -35,9 +52,23 @@ export default function Sidebar({ activeScreen, items, onNavigate }) {
         })}
       </nav>
 
-      <div className="sidebar__footer">
-        <span>Grupo Cordillera</span>
-        <strong>Suite Ejecutiva</strong>
+      <div className="sidebar__user">
+        <div className="sidebar__user-avatar" aria-hidden="true">
+          {user.nombre ? user.nombre.charAt(0).toUpperCase() : '?'}
+        </div>
+        <div className="sidebar__user-info">
+          <strong>{user.nombre || 'Usuario'}</strong>
+          <span>{user.rol || 'Sin rol'}</span>
+        </div>
+        <button
+          type="button"
+          className="sidebar__logout"
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+        >
+          <AppIcon name="logout" size={16} strokeWidth={2} />
+        </button>
       </div>
     </aside>
   )

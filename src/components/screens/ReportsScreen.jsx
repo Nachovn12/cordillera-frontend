@@ -13,11 +13,17 @@ const dateOnlyFormatter = new Intl.DateTimeFormat('es-CL', {
 })
 
 const EMPTY_REPORTS = []
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const ANIO_OPTIONS = (() => { const y = new Date().getFullYear(); return [y, y-1, y-2, y-3, y-4, y-5].map(String) })()
+const MES_OPTIONS = MONTH_NAMES.map((name, index) => ({ value: String(index + 1), label: name }))
+
 const INITIAL_REPORT_FORM = {
   titulo: 'Reporte ventas mensual',
   tipo: 'PDF',
   area: 'Ventas',
   valor: '1250000',
+  anio: String(new Date().getFullYear()),
+  mes: String(new Date().getMonth() + 1),
 }
 
 const reportTypes = ['PDF', 'Excel', 'JSON']
@@ -280,6 +286,22 @@ function GenerateReportModal({ form, actionLoading, onChange, onClose, onSubmit 
             <select name="area" value={form.area} onChange={onChange}>
               {reportAreas.map((area) => (
                 <option value={area} key={area}>{area}</option>
+              ))}
+            </select>
+          </label>
+          <label className="report-form-field">
+            <span>Año</span>
+            <select name="anio" value={form.anio} onChange={onChange} required>
+              {ANIO_OPTIONS.map((anio) => (
+                <option value={anio} key={anio}>{anio}</option>
+              ))}
+            </select>
+          </label>
+          <label className="report-form-field">
+            <span>Mes</span>
+            <select name="mes" value={form.mes} onChange={onChange} required>
+              {MES_OPTIONS.map((mes) => (
+                <option value={mes.value} key={mes.value}>{mes.label}</option>
               ))}
             </select>
           </label>
@@ -831,6 +853,8 @@ export default function ReportsScreen() {
       tipo: generateForm.tipo,
       area: generateForm.area,
       valor: Number(generateForm.valor) || 0,
+      anio: generateForm.anio ? Number(generateForm.anio) : null,
+      mes: generateForm.mes ? Number(generateForm.mes) : null,
     }
 
     void generar(payload)
@@ -843,7 +867,7 @@ export default function ReportsScreen() {
         showNotice('No fue posible generar el reporte desde Report Service.', 'warning')
       })
   }
-  
+
   const handleExport = (id, format) => {
     void exportar(id, format).then(() => {
       showNotice('Exportación real solicitada', 'success')

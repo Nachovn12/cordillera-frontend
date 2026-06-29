@@ -161,7 +161,7 @@ function buildDisplayedServices(data) {
   ]
 }
 
-export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
+export default function ExecutiveDashboard({ data, error, loading, onRetry, sucursal }) {
   if (loading) {
     return <DashboardSkeleton />
   }
@@ -196,7 +196,11 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry }) {
         <aside className="hero-panel__meta">
           <span>Última actualización</span>
           <strong>{data.fetchedAt}</strong>
-          <small>Fuente: BFF Gateway</small>
+          <small>
+            {sucursal && sucursal !== 'todas'
+              ? `Sucursal ID: ${sucursal} · BFF Gateway`
+              : 'Todas las sucursales · BFF Gateway'}
+          </small>
         </aside>
       </section>
 
