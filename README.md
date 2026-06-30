@@ -1,6 +1,6 @@
 # Frontend - Cordillera Platform
 
-Frontend ejecutivo desarrollado para **Cordillera Platform**, correspondiente al Parcial 2 de la asignatura **Desarrollo Full Stack III (DSY1106)**.
+Frontend ejecutivo desarrollado para **Cordillera Platform**, correspondiente al Parcial 3 de la asignatura **Desarrollo Full Stack III (DSY1106)**.
 
 ## Descripción
 
@@ -124,6 +124,7 @@ El frontend fue validado consumiendo datos reales desde el BFF Gateway:
 ### Endpoints consumidos desde el BFF
 
 ```text
+POST /api/auth/login
 GET /api/dashboard/stats
 GET /api/dashboard/kpis
 GET /api/reportes
@@ -224,6 +225,7 @@ Los servicios API están centralizados en `src/services/` y consumen únicamente
 Endpoints preparados:
 
 ```txt
+POST /api/auth/login
 GET /api/dashboard/stats
 GET /api/dashboard/kpis
 GET /api/reportes
