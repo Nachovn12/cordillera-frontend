@@ -56,7 +56,7 @@ function rolTone(rol) {
   return "info";
 }
 
-export default function UsersScreen() {
+export default function UsersScreen({ onBffStatusChange }) {
   const [usuarios, setUsuarios]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
@@ -79,6 +79,16 @@ export default function UsersScreen() {
   }
 
   useEffect(() => { fetchUsuarios(); }, []);
+
+  useEffect(() => {
+    if (loading) {
+      onBffStatusChange?.({ status: 'info', label: 'Consultando' })
+    } else if (error) {
+      onBffStatusChange?.({ status: 'danger', label: 'Error' })
+    } else {
+      onBffStatusChange?.({ status: 'success', label: 'Operativo' })
+    }
+  }, [loading, error, onBffStatusChange])
 
   function handleField(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));

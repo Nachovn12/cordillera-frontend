@@ -197,7 +197,7 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry, sucu
           <span>Última actualización</span>
           <strong>{data.fetchedAt}</strong>
           <small>
-            {sucursal && sucursal !== 'todas'
+            {sucursal && (sucursal !== 'todas' && sucursal !== 'Todas las sucursales')
               ? `Sucursal ID: ${sucursal} · BFF Gateway`
               : 'Todas las sucursales · BFF Gateway'}
           </small>

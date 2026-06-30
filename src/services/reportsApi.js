@@ -244,3 +244,18 @@ export async function exportarReporte(id, formato) {
 
   return { blob, fileName };
 }
+
+export async function eliminarReporte(id) {
+  const response = await requestWithTimeout(
+    `${API_BASE_URL}/api/v1/reportes/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`BFF Gateway respondió con estado HTTP ${response.status}`);
+  }
+
+  return true;
+}

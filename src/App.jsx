@@ -61,7 +61,13 @@ export default function App() {
   const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
   const [bffStatus, setBffStatus] = useState({ status: "info", label: "Pendiente" });
   const { settings } = useLocalSettings();
-  const [sucursal, setSucursal] = useState(() => settings.defaultBranch || "todas");
+  
+  // Limpieza defensiva: si el localStorage tiene guardado el label antiguo por error
+  const safeBranch = settings.defaultBranch === "Todas las sucursales" 
+    ? "todas" 
+    : (settings.defaultBranch || "todas");
+    
+  const [sucursal, setSucursal] = useState(safeBranch);
 
   const activeMeta = useMemo(() => screenMeta[activeScreen], [activeScreen]);
 

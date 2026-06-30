@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { exportarReporte, generarReporte, getReportes } from '../services/reportsApi'
+import { exportarReporte, generarReporte, getReportes, eliminarReporte } from '../services/reportsApi'
 
 export default function useReports() {
   const [data, setData] = useState(null)
@@ -62,6 +62,22 @@ export default function useReports() {
     }
   }, [])
 
+  const eliminar = useCallback(async (id) => {
+    setActionLoading(true)
+    setActionError(null)
+
+    try {
+      const response = await eliminarReporte(id)
+      await fetchReports()
+      return response
+    } catch (currentError) {
+      setActionError(currentError)
+      throw currentError
+    } finally {
+      setActionLoading(false)
+    }
+  }, [fetchReports])
+
   useEffect(() => {
     fetchReports()
   }, [fetchReports])
@@ -73,6 +89,7 @@ export default function useReports() {
     refetch: fetchReports,
     generar,
     exportar,
+    eliminar,
     actionLoading,
     actionError,
   }

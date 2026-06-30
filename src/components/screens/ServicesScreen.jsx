@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import ServiceStatusCard from '../dashboard/ServiceStatusCard'
 import TrendPanel from '../dashboard/TrendPanel'
 import AppIcon from '../ui/AppIcon'
@@ -248,8 +249,18 @@ function IncidentsPanel({ incidents }) {
   )
 }
 
-export default function ServicesScreen() {
+export default function ServicesScreen({ onBffStatusChange }) {
   const { data, loading, error, refetch } = useDashboardStats()
+
+  useEffect(() => {
+    if (loading) {
+      onBffStatusChange?.({ status: 'info', label: 'Consultando' })
+    } else if (error) {
+      onBffStatusChange?.({ status: 'danger', label: 'Error' })
+    } else if (data) {
+      onBffStatusChange?.({ status: 'success', label: 'Operativo' })
+    }
+  }, [loading, error, data, onBffStatusChange])
 
   if (loading) {
     return <ServicesLoadingState />

@@ -612,6 +612,7 @@ function ReportsLibrary({
   onCopyName,
   onCopyReference,
   onExport,
+  onDelete,
 }) {
   return (
     <div className="panel panel--table panel--library reports-library">
@@ -703,6 +704,9 @@ function ReportsLibrary({
                       <button type="button" role="menuitem" onClick={() => onCopyReference(report)}>
                         Copiar referencia
                       </button>
+                      <button type="button" role="menuitem" onClick={() => onDelete(report)} style={{ color: '#ef4444' }}>
+                        Eliminar reporte
+                      </button>
                     </div>
                   )}
                 </div>
@@ -729,7 +733,7 @@ function SupportedFormatsPanel() {
   return (
     <div className="panel panel--templates">
       <SectionHeader title="Formatos Soportados" description="Formatos de exportación disponibles a través de Report Service." />
-      <div className="template-grid" style={{ gridTemplateColumns: '1fr' }}>
+      <div className="template-grid">
         <article className="template-card">
           <div className="icon-box icon-box--teal">
             <AppIcon name="document" size={17} strokeWidth={2} />
@@ -765,7 +769,7 @@ function SupportedFormatsPanel() {
   )
 }
 
-export default function ReportsScreen({ sucursal = 'todas' }) {
+export default function ReportsScreen({ sucursal = 'todas', onBffStatusChange }) {
   const [filters, setFilters] = useState({
     area: 'todos',
     formato: 'todos',
@@ -786,6 +790,7 @@ export default function ReportsScreen({ sucursal = 'todas' }) {
     refetch,
     generar,
     exportar,
+    eliminar,
     actionLoading,
     actionError,
   } = useReports()
@@ -793,6 +798,16 @@ export default function ReportsScreen({ sucursal = 'todas' }) {
   const reports = data?.reportes ?? EMPTY_REPORTS
   const hasFilters = Object.values(filters).some((value) => value !== 'todos')
   const filteredReports = useMemo(() => filterReports(reports, filters), [reports, filters])
+
+  useEffect(() => {
+    if (loading) {
+      onBffStatusChange?.({ status: 'info', label: 'Consultando' })
+    } else if (error) {
+      onBffStatusChange?.({ status: 'danger', label: 'Error' })
+    } else if (data) {
+      onBffStatusChange?.({ status: 'success', label: 'Operativo' })
+    }
+  }, [loading, error, data, onBffStatusChange])
   const areaOptions = useMemo(() => getUniqueOptions(reports.map((report) => report.area)), [reports])
   const formatOptions = useMemo(
     () => getUniqueOptions(reports.flatMap((report) => report.formats.map((format) => format.value))),
@@ -926,9 +941,20 @@ export default function ReportsScreen({ sucursal = 'todas' }) {
       .catch(() => showNotice('No fue posible copiar la referencia del reporte.', 'warning'))
   }
 
+  const handleDelete = (report) => {
+    setOpenMenuId(null)
+    setOpenDownloadMenuId(null)
+
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el reporte "${report.title}"?`)) {
+      void eliminar(report.id)
+        .then(() => showNotice('Reporte eliminado exitosamente.', 'success'))
+        .catch(() => showNotice('No fue posible eliminar el reporte.', 'warning'))
+    }
+  }
+
   return (
     <main className="screen screen--reports">
-      {sucursal !== 'todas' && (
+      {(sucursal !== 'todas' && sucursal !== 'Todas las sucursales') && (
         <div style={{
           backgroundColor: '#e0f2fe',
           borderLeft: '4px solid #0284c7',
@@ -1002,6 +1028,7 @@ export default function ReportsScreen({ sucursal = 'todas' }) {
           onCopyName={handleCopyName}
           onCopyReference={handleCopyReference}
           onExport={handleExport}
+          onDelete={handleDelete}
         />
 
         <div className="reports-secondary-grid">

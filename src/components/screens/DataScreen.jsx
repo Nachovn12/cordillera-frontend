@@ -170,7 +170,9 @@ export default function DataScreen({ refreshToken = 0, onBffStatusChange, sucurs
       setLoading(true)
       setError(null)
       // Fetch by Sucursal or All
-      let data = sucursal === 'todas' ? await getDatos() : await getDatosBySucursal(sucursal)
+      let data = (sucursal === 'todas' || sucursal === 'Todas las sucursales') 
+        ? await getDatos() 
+        : await getDatosBySucursal(sucursal)
       
       // Local filter by Sistema
       if (filterSistema !== 'todos') {
@@ -178,10 +180,10 @@ export default function DataScreen({ refreshToken = 0, onBffStatusChange, sucurs
       }
       
       setDatos(data)
-      onBffStatusChange?.('Operativo')
+      onBffStatusChange?.({ status: 'success', label: 'Operativo' })
     } catch (err) {
       setError(err)
-      onBffStatusChange?.('Error', err.message)
+      onBffStatusChange?.({ status: 'danger', label: 'Error' })
     } finally {
       setLoading(false)
     }

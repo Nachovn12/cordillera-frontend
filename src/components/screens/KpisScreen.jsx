@@ -312,7 +312,7 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
 
   return (
     <main className="screen screen--kpis">
-      {sucursal !== 'todas' && (
+      {(sucursal !== 'todas' && sucursal !== 'Todas las sucursales') && (
         <div style={{
           backgroundColor: '#e0f2fe',
           borderLeft: '4px solid #0284c7',
