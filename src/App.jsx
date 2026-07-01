@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardProvider } from "./context/DashboardContext";
 import useLocalSettings from "./hooks/useLocalSettings";
 import AppShell from "./components/layout/AppShell";
@@ -72,14 +72,14 @@ export default function App() {
   const activeMeta = useMemo(() => screenMeta[activeScreen], [activeScreen]);
 
   // Sincroniza el estado cuando el usuario usa Atrás/Adelante del navegador
-  useState(() => {
+  useEffect(() => {
     const onPopState = () => {
       const screenId = pathToScreen[window.location.pathname] ?? "dashboard";
       setActiveScreen(screenId);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  });
+  }, []);
 
   // Gate de autenticación — debe ir después de todos los hooks
   if (!isAuthenticated) {

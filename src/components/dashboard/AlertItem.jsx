@@ -111,17 +111,27 @@ export default function AlertItem({
   }
 
   return (
-    <article className="alert-item">
-      <span className={`alert-item__icon alert-item__icon--${severityStatus}`}>
-        <AppIcon name={severityStatus === 'info' ? 'document' : severityStatus === 'critical' ? 'shield' : 'alerts'} size={19} strokeWidth={2} />
-      </span>
-      <div>
-        <h3>{title}</h3>
-        <p>{description}</p>
+    <article className="alert-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', padding: '12px 18px 12px 14px', width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#ffffff', transition: 'all 0.2s ease', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.02)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '38px', height: '38px', borderRadius: '8px', background: severityStatus === 'critical' ? '#fef2f2' : severityStatus === 'warning' ? '#fffbeb' : '#f0fdf4', color: severityStatus === 'critical' ? '#dc2626' : severityStatus === 'warning' ? '#d97706' : '#16a34a' }}>
+        <AppIcon name={severityStatus === 'info' ? 'document' : severityStatus === 'critical' ? 'shield' : 'alerts'} size={18} strokeWidth={2} />
       </div>
-      <span className="tag">{category}</span>
-      {detectedAt && <time>{detectedAt}</time>}
-      <AppIcon name="chevronRight" size={17} strokeWidth={2.1} />
+
+      <div style={{ flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px', paddingRight: '8px' }}>
+        <h3 style={{ margin: 0, color: '#0f172a', fontWeight: 600, fontSize: '0.86rem', lineHeight: '1.2' }}>
+          {title}
+        </h3>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '0.75rem', fontWeight: 500, lineHeight: '1.35' }}>
+          {description}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '4px' }}>
+        <span className="tag" style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, background: '#f1f5f9', color: '#475569' }}>{category}</span>
+        {detectedAt && <time style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{detectedAt}</time>}
+        <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+          <AppIcon name="chevronRight" size={16} strokeWidth={2} />
+        </span>
+      </div>
     </article>
   )
 }
