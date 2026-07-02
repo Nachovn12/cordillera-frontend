@@ -24,6 +24,42 @@ function toArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+// Normaliza las unidades para que sean consistentes
+function normalizeUnit(unit) {
+  if (!unit) return "";
+
+  const normalized = String(unit).toLowerCase().trim();
+
+  // Mapeo de valores comunes a sus abreviaturas
+  const unitMap = {
+    "porcentaje": "%",
+    "%": "%",
+    "clp": "CLP",
+    "chileno": "CLP",
+    "peso": "CLP",
+    "pesos": "CLP",
+    "unidade": "unidades",
+    "unidades": "unidades",
+    "unidad": "unidades",
+    "logistica": "unidades",
+    "logística": "unidades",
+  };
+
+  return unitMap[normalized] || unit;
+}
+
+// Corrige la unidad según la categoría (como fuente de verdad)
+function enforceUnitByCategory(category, unit) {
+  const normalized = String(category || "").toLowerCase();
+
+  if (normalized.includes("venta")) return "CLP";
+  if (normalized.includes("invent")) return "unidades";
+  if (normalized.includes("logist")) return "unidades";
+  if (normalized.includes("rentab")) return "%";
+
+  return unit; // Si no coincide, mantén la unidad existente
+}
+
 function formatDateTime(value) {
   if (!value) return "Reciente";
 
@@ -76,13 +112,37 @@ export function normalizeBffStatus(value) {
 }
 
 function normalizeKpi(kpi, index) {
-  const rawValue = getFirstDefined(
+  let rawValue = getFirstDefined(
     kpi.valor,
     kpi.value,
     kpi.valorActual,
     kpi.currentValue,
   );
-  const unit = getFirstDefined(kpi.unidad, kpi.unit, "");
+
+  let unit = getFirstDefined(kpi.unidad, kpi.unit, "");
+  const category = getFirstDefined(kpi.categoria, kpi.category, "General");
+
+  // Si el valor contiene texto de unidad anexada (ej: "1.800.000 porcentaje"),
+  // extrae el número y la unidad
+  if (rawValue && typeof rawValue === "string") {
+    const valueStr = String(rawValue).trim();
+    const parts = valueStr.split(/\s+/);
+
+    if (parts.length > 1) {
+      // El último token podría ser la unidad
+      const lastPart = parts[parts.length - 1].toLowerCase();
+      if (lastPart.match(/^(porcentaje|clp|pesos|unidades?|logistica|rentabilidad)$/i)) {
+        rawValue = parts.slice(0, -1).join(" "); // Mantén el número
+        unit = unit || lastPart; // Usa la unidad encontrada si no hay una explícita
+      }
+    }
+  }
+
+  unit = normalizeUnit(unit);
+
+  // Corrige la unidad basada en la categoría (fuente de verdad)
+  unit = enforceUnitByCategory(category, unit);
+
   const statusLabel = getFirstDefined(
     kpi.estado,
     kpi.status,
@@ -94,7 +154,6 @@ function normalizeKpi(kpi, index) {
     : String(statusLabel).toLowerCase().includes("error")
       ? "danger"
       : "success";
-  const category = getFirstDefined(kpi.categoria, kpi.category, "General");
 
   return {
     id: getFirstDefined(kpi.id, kpi.codigo, `kpi-${index}`),

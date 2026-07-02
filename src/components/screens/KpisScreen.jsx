@@ -5,17 +5,66 @@ import MetricCard from '../ui/MetricCard'
 import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
 import { useDashboardContext } from '../../context/DashboardContext'
-import { createKpi } from '../../services/kpisApi'
+import { createKpi, deleteKpi } from '../../services/kpisApi'
 
 const KPI_CATEGORIAS = ['Ventas', 'Inventario', 'Logistica', 'Rentabilidad']
 const KPI_ESTADOS = ['Activo', 'Advertencia', 'Crítico', 'En objetivo']
 
+// Mapeo de categoría → unidad por defecto
+const UNIT_BY_CATEGORY = {
+  'Ventas': 'CLP',
+  'Inventario': 'unidades',
+  'Logistica': 'unidades',
+  'Rentabilidad': '%',
+}
+
+// Mapeo de categoría/unidad → placeholder de ejemplo
+const VALUE_PLACEHOLDER_BY_CATEGORY = {
+  'Ventas_CLP': 'Ej: 1.500.000',
+  'Inventario_unidades': 'Ej: 250',
+  'Logistica_unidades': 'Ej: 95.5',
+  'Rentabilidad_%': 'Ej: 18.5',
+}
+
 const INITIAL_KPI_FORM = {
   nombre: '',
   valor: '',
-  unidad: '%',
+  unidad: 'CLP',  // Unidad inicial basada en categoría Ventas
   categoria: 'Ventas',
   estado: 'Activo',
+}
+
+// Función helper para obtener el placeholder de valor
+function getValuePlaceholder(categoria, unidad) {
+  const key = `${categoria}_${unidad}`
+  return VALUE_PLACEHOLDER_BY_CATEGORY[key] || 'Ej: 100'
+}
+
+// Parsea números en formato chileno (1.500.000 o 1500000 o 1.500.000,50)
+function parseChileanNumber(value) {
+  if (!value) return '';
+
+  const str = String(value).trim();
+
+  // Si contiene coma, es el separador decimal - convertir a punto
+  if (str.includes(',')) {
+    return str.replace(/\./g, '').replace(',', '.');
+  }
+
+  // Si contiene puntos, podrían ser separadores de miles
+  // Mantener solo el último punto si lo hay (después del 3er dígito desde atrás)
+  const parts = str.split('.');
+  if (parts.length > 1) {
+    // Si el último grupo tiene 1-3 dígitos, es probablemente decimal
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.length <= 3 && lastPart.length > 0) {
+      return parts.slice(0, -1).join('') + '.' + lastPart;
+    }
+    // Si no, todos son separadores de miles
+    return parts.join('');
+  }
+
+  return str;
 }
 
 function KpisSkeleton() {
@@ -217,8 +266,9 @@ function KpiCreateModal({ form, loading, notice, onChange, onClose, onSubmit }) 
           <label className="report-form-field">
             <span>Valor</span>
             <input
-              name="valor" type="number" min="0" step="0.01"
-              value={form.valor} onChange={onChange} required placeholder="Ej: 85.5"
+              name="valor" type="text"
+              value={form.valor} onChange={onChange} required
+              placeholder={getValuePlaceholder(form.categoria, form.unidad)}
             />
           </label>
           <label className="report-form-field">
@@ -251,6 +301,9 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
   const [createLoading, setCreateLoading] = useState(false)
   const [createNotice, setCreateNotice] = useState(null)
 
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
   useEffect(() => { fetchKpis() }, [fetchKpis])
 
   useEffect(() => {
@@ -272,7 +325,17 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
 
   const handleFormChange = (event) => {
     const { name, value } = event.target
-    setCreateForm((current) => ({ ...current, [name]: value }))
+
+    setCreateForm((current) => {
+      const updated = { ...current, [name]: value }
+
+      // Si cambió la categoría, actualiza la unidad automáticamente
+      if (name === 'categoria') {
+        updated.unidad = UNIT_BY_CATEGORY[value] || '%'
+      }
+
+      return updated
+    })
   }
 
   const handleCreateSubmit = (event) => {
@@ -280,9 +343,21 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
     setCreateLoading(true)
     setCreateNotice(null)
 
+    const parsedValue = parseChileanNumber(createForm.valor)
+    const numericValue = Number(parsedValue)
+
+    if (!parsedValue || Number.isNaN(numericValue) || numericValue < 0) {
+      setCreateNotice({
+        message: 'El valor debe ser un número válido mayor o igual a 0.',
+        tone: 'warning'
+      })
+      setCreateLoading(false)
+      return
+    }
+
     const payload = {
       nombre: createForm.nombre.trim(),
-      valor: Number(createForm.valor),
+      valor: numericValue,
       unidad: createForm.unidad.trim(),
       categoria: createForm.categoria,
       estado: createForm.estado,
@@ -293,7 +368,14 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
         setCreateNotice({ message: 'KPI creado correctamente en KPI Service.', tone: 'success' })
         setTimeout(() => {
           setShowCreateModal(false)
-          setCreateForm(INITIAL_KPI_FORM)
+          // Reinicia el formulario con valores iniciales correctos
+          setCreateForm({
+            nombre: '',
+            valor: '',
+            unidad: UNIT_BY_CATEGORY['Ventas'],
+            categoria: 'Ventas',
+            estado: 'Activo',
+          })
           setCreateNotice(null)
           fetchKpis()
         }, 1200)
@@ -308,6 +390,26 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
     setShowCreateModal(false)
     setCreateForm(INITIAL_KPI_FORM)
     setCreateNotice(null)
+  }
+
+  const handleDeleteKpi = async (kpiId, kpiTitle) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar "${kpiTitle}"? Esta acción no se puede deshacer.`)) {
+      return
+    }
+
+    setDeleteLoading(true)
+    setDeleteConfirm(kpiId)
+
+    try {
+      await deleteKpi(kpiId)
+      setDeleteConfirm(null)
+      await fetchKpis()
+    } catch (error) {
+      alert(`Error al eliminar KPI: ${error.message}`)
+      setDeleteConfirm(null)
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   return (
@@ -359,16 +461,18 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
                   <th>Cumplimiento</th>
                   <th>Variación</th>
                   <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {kpis.map((kpi) => {
                   const isNegative = String(kpi.change).trim().startsWith('-')
+                  const displayUnit = kpi.unit && kpi.unit !== 'CLP' ? ` ${kpi.unit}` : ''
                   return (
                     <tr key={kpi.id}>
                       <td className="table-indicator">{kpi.title}</td>
                       <td>{kpi.category}</td>
-                      <td>{`${kpi.value}${kpi.unit && kpi.unit !== 'CLP' ? ` ${kpi.unit}` : ''}`}</td>
+                      <td>{`${kpi.value}${displayUnit}`}</td>
                       <td>{kpi.target.replace('Meta: ', '')}</td>
                       <td>{kpi.completion}</td>
                       <td className={isNegative ? 'table-variation--negative' : 'table-variation--positive'}>
@@ -376,6 +480,19 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
                       </td>
                       <td>
                         <StatusBadge status={statusForTable(kpi)} label={kpi.statusLabel} />
+                      </td>
+                      <td>
+                        <button
+                          className="icon-button"
+                          type="button"
+                          onClick={() => handleDeleteKpi(kpi.id, kpi.title)}
+                          disabled={deleteLoading || deleteConfirm === kpi.id}
+                          title="Eliminar KPI"
+                          aria-label="Eliminar KPI"
+                          style={{ color: '#dc2626' }}
+                        >
+                          <AppIcon name="trash" size={16} strokeWidth={2} />
+                        </button>
                       </td>
                     </tr>
                   )
