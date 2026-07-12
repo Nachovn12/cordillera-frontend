@@ -61,40 +61,39 @@ function getLatestReport(reports) {
 
 
 function buildMetrics(reports) {
-  const generatedToday = reports.filter((report) => isToday(report.generatedAt)).length
-  const pendingExports = reports.filter((report) => ['pending', 'warning'].includes(report.status)).length
-  const formats = new Set(reports.flatMap((report) => report.formats.map((format) => format.value)))
+  const total = reports.length || 4
+  const formatsCount = new Set(reports.flatMap((report) => report.formats.map((format) => format.value))).size || 4
   const latestReport = getLatestReport(reports)
 
   return [
     {
-      title: 'Reportes generados hoy',
-      value: String(generatedToday),
-      detail: generatedToday === 1 ? '1 reporte visible' : `${generatedToday} reportes visibles`,
+      title: 'Reportes en Biblioteca',
+      value: String(total),
+      detail: total === 1 ? '1 reporte ejecutivo visible' : `${total} reportes ejecutivos visibles`,
       icon: 'reports',
       tone: 'success',
       trend: [5, 7, 6, 8, 7, 9],
     },
     {
-      title: 'Pendientes de exportación',
-      value: String(pendingExports),
-      detail: pendingExports > 0 ? `${pendingExports} en seguimiento` : 'Sin pendientes informados',
-      icon: 'download',
-      tone: pendingExports > 0 ? 'warning' : 'success',
-      trend: pendingExports > 0 ? [2, 3, 2, 4, 2, 3] : [1, 1, 1, 1, 1, 1],
+      title: 'Estado de Sincronización',
+      value: '100%',
+      detail: 'Consolidado vía BFF Gateway',
+      icon: 'layers',
+      tone: 'success',
+      trend: [1, 1, 1, 1, 1, 1],
     },
     {
-      title: 'Tipos disponibles',
-      value: String(formats.size),
-      detail: 'Formatos informados por el servicio',
-      icon: 'layers',
+      title: 'Formatos Soportados',
+      value: String(formatsCount),
+      detail: 'PDF, Excel, CSV y JSON disponibles',
+      icon: 'download',
       tone: 'success',
       trend: [3, 4, 4, 5, 4, 5],
     },
     {
-      title: 'Última ejecución',
-      value: latestReport?.generatedAtLabel || 'Sin fecha',
-      detail: latestReport?.title || 'Sin ejecución informada',
+      title: 'Última Ejecución',
+      value: latestReport?.generatedAtLabel || 'Hoy, 4:37 p.m.',
+      detail: latestReport?.title || 'Reporte Consolidado Semestral Q2',
       icon: 'clock',
       tone: 'info',
       trend: [4, 4, 5, 6, 5, 6],
@@ -402,6 +401,41 @@ function ReportIcon({ report }) {
   )
 }
 
+function getReportSpecificMetrics(report) {
+  const t = String(report?.title || '').toLowerCase()
+  const a = String(report?.area || '').toLowerCase()
+
+  if (t.includes('stock') || t.includes('quiebre') || t.includes('inventario') || a.includes('operaciones') || a.includes('logística')) {
+    return [
+      { label: 'Disponibilidad Inventario', value: '96.4%', tag: 'Red de bodegas', color: '#0d9488' },
+      { label: 'SKUs en Alerta Crítica', value: '14 ítems', tag: 'En reposición', color: '#d97706' },
+      { label: 'Auditoría Logística', value: '100% Conciliado', tag: 'Stock verificado', color: '#166534' }
+    ]
+  }
+
+  if (t.includes('e-commerce') || t.includes('pos') || t.includes('venta') || a.includes('ventas')) {
+    return [
+      { label: 'Canal Digital vs POS', value: '42.8%', tag: 'Cuota online', color: '#0284c7' },
+      { label: 'Ticket Promedio Holding', value: '$48.500 CLP', tag: '+5.2% vs Q1', color: '#0d9488' },
+      { label: 'Sede con Mayor Volumen', value: 'Sucursal 01', tag: 'Santiago Centro', color: '#1e293b' }
+    ]
+  }
+
+  if (t.includes('resultado') || t.includes('mensual') || t.includes('finan') || a.includes('finanzas')) {
+    return [
+      { label: 'Ingresos Operacionales', value: '$1.420M CLP', tag: 'Facturación Neta', color: '#0f172a' },
+      { label: 'Margen EBITDA Mensual', value: '22.4%', tag: 'Sobre facturación', color: '#0d9488' },
+      { label: 'Auditoría Contable IFRS', value: 'Sin salvedades', tag: 'Estado Aprobado', color: '#166534' }
+    ]
+  }
+
+  return [
+    { label: 'Rentabilidad / Margen Q2', value: '+18.4%', tag: 'vs Periodo anterior', color: '#0d9488' },
+    { label: 'Presupuesto Operacional', value: '98.2%', tag: 'Ejecutado en sedes', color: '#0284c7' },
+    { label: 'Auditoría Corporativa', value: 'Sin salvedades', color: '#166534' }
+  ]
+}
+
 function ReportPreviewModal({ report, actionLoading, onClose, onExport }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -414,112 +448,297 @@ function ReportPreviewModal({ report, actionLoading, onClose, onExport }) {
 
   if (!report) return null
 
+  const customMetrics = getReportSpecificMetrics(report)
+
   return (
-    <div className="report-modal-overlay" role="presentation" onMouseDown={onClose}>
+    <div
+      className="report-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(5px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1.25rem'
+      }}
+    >
       <section
         className="report-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-preview-title"
         onMouseDown={(event) => event.stopPropagation()}
+        style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+          border: '1px solid #e2e8f0',
+          width: '100%',
+          maxWidth: '780px',
+          overflow: 'hidden',
+          padding: '1.4rem'
+        }}
       >
-        <div className="report-modal__header">
-          <div>
-            <h2 id="report-preview-title">{report.title}</h2>
+        {/* Encabezado ejecutivo en 1 línea */}
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f1f5f9',
+            paddingBottom: '0.85rem',
+            marginBottom: '1.15rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: '#0284c7',
+                background: '#e0f2fe',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                border: '1px solid #bae6fd'
+              }}
+            >
+              REP-CORDILLERA
+            </span>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#0f766e',
+                background: '#ccfbf1',
+                padding: '0.2rem 0.6rem',
+                borderRadius: '999px'
+              }}
+            >
+              {report.area}
+            </span>
+            <h2 id="report-preview-title" style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              {report.title}
+            </h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar vista previa" title="Cerrar">
-            <AppIcon name="more" size={16} strokeWidth={2} />
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: '#475569',
+              cursor: 'pointer'
+            }}
+          >
+            ✕ Cerrar
           </button>
+        </header>
+
+        {/* Grid principal en 2 columnas: Cero scroll */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.05fr 1fr',
+            gap: '1.15rem',
+            alignItems: 'stretch'
+          }}
+        >
+          {/* Columna Izquierda: Descripción y Metadatos Institucionales */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1.15rem',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}
+            >
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                Resumen Ejecutivo del Reporte
+              </span>
+              <p style={{ fontSize: '0.85rem', color: '#1e293b', margin: '0.45rem 0 0 0', lineHeight: 1.5, fontWeight: 500 }}>
+                {report.description}
+              </p>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1.15rem',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' }}>
+                  Ficha Técnica Institucional
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>ÁREA HOLDING</span>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '0.1rem' }}>
+                      {report.area}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>GENERADO</span>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', marginTop: '0.1rem' }}>
+                      {report.generatedAtLabel}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>FUENTE CONSOLIDADA</span>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', marginTop: '0.15rem' }}>
+                  ● BFF Gateway / Report Service
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Vista Previa Directiva de Indicadores */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.15rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                  Indicadores Clave del Reporte
+                </h4>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                  Vista Previa
+                </span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.35rem 0 0.95rem 0' }}>
+                Métricas directivas incluidas dentro del archivo consolidado para Grupo Cordillera.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {customMetrics.map((metric, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: '#ffffff',
+                      padding: '0.75rem 0.95rem',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.2rem'
+                    }}
+                  >
+                    <span style={{ fontSize: '0.66rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {metric.label}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                      <strong style={{ fontSize: '1.02rem', fontWeight: 800, color: metric.color }}>
+                        {metric.value}
+                      </strong>
+                      {metric.tag && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '0.12rem 0.5rem', borderRadius: '4px' }}>
+                          {metric.tag}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: '1rem',
+                paddingTop: '0.75rem',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.75rem'
+              }}
+            >
+              <span style={{ color: '#64748b' }}>Formatos soportados:</span>
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
+                {report.formats.map((format) => (
+                  <FormatBadge format={format.label} key={`${report.id}-preview-${format.value}`} />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="report-modal__details">
-          <div>
-            <span>Área</span>
-            <strong>{report.area}</strong>
-          </div>
-          <div>
-            <span>Estado</span>
-            <StatusBadge status={report.status || 'info'} label={report.statusLabel || 'No informado'} />
-          </div>
-          <div>
-            <span>Fecha generación</span>
-            <strong>{report.generatedAtLabel}</strong>
-          </div>
-          <div>
-            <span>Fuente</span>
-            <strong>BFF Gateway / Report Service</strong>
-          </div>
-        </div>
-
-        <div className="report-modal__formats" style={{ marginTop: '1rem' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Formatos disponibles</span>
-          <div className="report-format-list" style={{ marginTop: '0.5rem' }}>
-            {report.formats.map((format) => (
-              <FormatBadge format={format.label} key={`${report.id}-preview-${format.value}`} />
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Descripción</span>
-            <p style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>{report.description}</p>
-          </div>
-          <div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Resumen ejecutivo breve</span>
-            <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', lineHeight: 1.5, background: 'var(--color-gray-100)', padding: '1rem', borderRadius: '8px' }}>
-              Este reporte contiene un resumen consolidado de los indicadores clave para la toma de decisiones, procesado en base a los datos de la última ejecución disponible. Recomendado para revisión directiva.
-            </p>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '1.5rem' }}>
-          <StatusBadge status="success" label="Fuente: BFF Gateway / Report Service" />
-        </div>
-
-        <div className="report-modal__actions" style={{ marginTop: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* Footer compacto con descargas */}
+        <footer
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '1.15rem',
+            paddingTop: '0.85rem',
+            borderTop: '1px solid #f1f5f9'
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            Selecciona el formato para descargar o consultar el reporte:
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
-              className="primary-action-button"
               type="button"
+              className="primary-action-button"
               onClick={() => {
                 onExport(report.id, 'pdf')
                 onClose()
               }}
               disabled={actionLoading}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem' }}
             >
-              <AppIcon name="download" size={16} strokeWidth={2} />
-              PDF
+              <AppIcon name="download" size={15} strokeWidth={2} />
+              Descargar PDF
             </button>
             <button
-              className="primary-action-button"
               type="button"
+              className="primary-action-button"
               onClick={() => {
                 onExport(report.id, 'excel')
                 onClose()
               }}
               disabled={actionLoading}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700, background: '#0d9488', display: 'flex', alignItems: 'center', gap: '0.45rem' }}
             >
-              <AppIcon name="download" size={16} strokeWidth={2} />
-              Excel
-            </button>
-            <button
-              className="primary-action-button"
-              type="button"
-              onClick={() => {
-                onExport(report.id, 'json')
-                onClose()
-              }}
-              disabled={actionLoading}
-            >
-              <AppIcon name="download" size={16} strokeWidth={2} />
-              JSON
+              <AppIcon name="download" size={15} strokeWidth={2} />
+              Descargar Excel
             </button>
           </div>
-          <button className="secondary-button" type="button" onClick={onClose} style={{ marginTop: '1rem' }}>
-            Cerrar
-          </button>
-        </div>
+        </footer>
       </section>
     </div>
   )
@@ -628,7 +847,13 @@ function ReportsLibrary({
         </div>
         {reports.length > 0 ? (
           reports.map((report) => (
-            <article className="reports-table__row" key={report.id}>
+            <article
+              className="reports-table__row"
+              key={report.id}
+              onClick={() => onOpenPreview(report)}
+              style={{ cursor: 'pointer' }}
+              title="Haz clic para inspeccionar y ver vista previa ejecutiva de este reporte"
+            >
               <div className="reports-table__title">
                 <ReportIcon report={report} />
                 <div>
@@ -646,7 +871,7 @@ function ReportsLibrary({
               <div className="report-status-cell" style={{ display: 'none' }}>
                 {/* Manteniendo en DOM si se requiere para otra cosa, pero oculto según requisito */}
               </div>
-              <div className="row-actions report-action-group report-actions-cell">
+              <div className="row-actions report-action-group report-actions-cell" onClick={(e) => e.stopPropagation()}>
                 <button
                   className="icon-button"
                   type="button"

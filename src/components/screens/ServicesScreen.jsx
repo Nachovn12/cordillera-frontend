@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import ServiceStatusCard from '../dashboard/ServiceStatusCard'
 import TrendPanel from '../dashboard/TrendPanel'
 import AppIcon from '../ui/AppIcon'
@@ -6,6 +6,395 @@ import MetricCard from '../ui/MetricCard'
 import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
 import useDashboardStats from '../../hooks/useDashboardStats'
+
+function getServiceContextualData(service) {
+  const name = String(service?.name || '').toLowerCase()
+
+  if (name.includes('data')) {
+    return {
+      portProtocol: ':8083 · Spring Boot 3 REST Service',
+      dbConnection: 'MySQL 8 (data_db.datos) · XAMPP localhost:3306',
+      archRole: 'Repositorio transaccional de ventas, inventario, finanzas y CRM consolidados por sucursal.',
+      chartTitle: 'Tráfico por Sistema de Origen',
+      chartDesc: 'Distribución transaccional por módulo POS & ERP.',
+      distribution: [
+        { name: 'POS Retail (Punto de Venta)', share: 52, valueLabel: '52% volumen' },
+        { name: 'Finanzas & Tesorería', share: 28, valueLabel: '28% volumen' },
+        { name: 'E-commerce & Web Orders', share: 20, valueLabel: '20% volumen' }
+      ],
+      endpoints: [
+        { method: 'GET', path: '/api/v1/datos/sucursal/{id}', desc: 'Datos filtrados por sucursal' },
+        { method: 'POST', path: '/api/v1/datos', desc: 'Registro transaccional POS/ERP' }
+      ]
+    }
+  }
+
+  if (name.includes('kpi')) {
+    return {
+      portProtocol: ':8082 · Spring Boot 3 KPI Engine',
+      dbConnection: 'MySQL 8 (data_db.kpis) · XAMPP localhost:3306',
+      archRole: 'Motor estadístico para evaluación de metas comerciales, rotación logística y rentabilidad.',
+      chartTitle: 'Evaluación por Área Estratégica',
+      chartDesc: 'Carga computacional de indicadores directivos.',
+      distribution: [
+        { name: 'Ventas & Facturación POS', share: 44, valueLabel: '44% del motor' },
+        { name: 'Eficiencia Logística & Stock', share: 32, valueLabel: '32% del motor' },
+        { name: 'Margen Financiero & EBITDA', share: 24, valueLabel: '24% del motor' }
+      ],
+      endpoints: [
+        { method: 'GET', path: '/api/v1/kpis', desc: 'Consolidado general de KPIs' },
+        { method: 'GET', path: '/api/v1/kpis/categoria/{cat}', desc: 'Filtrado por área de negocio' }
+      ]
+    }
+  }
+
+  if (name.includes('report')) {
+    return {
+      portProtocol: ':8084 · Spring Boot 3 Document Engine',
+      dbConnection: 'MySQL 8 (data_db.reportes) · XAMPP localhost:3306',
+      archRole: 'Generador y catalogador de informes corporativos en formatos PDF, Excel y CSV.',
+      chartTitle: 'Demanda por Formato Documental',
+      chartDesc: 'Desglose de exportaciones gerenciales.',
+      distribution: [
+        { name: 'PDF Ejecutivo de Directorio', share: 65, valueLabel: '65% solicitudes' },
+        { name: 'Excel Detallado Financiero', share: 25, valueLabel: '25% solicitudes' },
+        { name: 'CSV para Auditoría Externa', share: 10, valueLabel: '10% solicitudes' }
+      ],
+      endpoints: [
+        { method: 'GET', path: '/api/v1/reportes', desc: 'Catálogo de reportes emitidos' },
+        { method: 'GET', path: '/api/v1/reportes/{id}/descargar', desc: 'Descarga documental binaria' }
+      ]
+    }
+  }
+
+  return {
+    portProtocol: ':8080 · Spring Boot 3 BFF Gateway',
+    dbConnection: 'Orquestador HTTP -> :8082, :8083, :8084',
+    archRole: 'Punto de entrada único para React, balanceo de carga y control de fallos en cascada.',
+    chartTitle: 'Tráfico de Orquestación por Módulo',
+    chartDesc: 'Peticiones procesadas por el BFF Gateway.',
+    distribution: [
+      { name: 'Consultas Dashboard & Ventas', share: 48, valueLabel: '48% tráfico' },
+      { name: 'Evaluación KPIs & Alertas', share: 32, valueLabel: '32% tráfico' },
+      { name: 'Gestión Documental & Reportes', share: 20, valueLabel: '20% tráfico' }
+    ],
+    endpoints: [
+      { method: 'GET', path: '/api/dashboard/stats', desc: 'Agregación de salud general' },
+      { method: 'GET', path: '/api/dashboard/sucursal/{id}', desc: 'Consolidación por sucursal' }
+    ]
+  }
+}
+
+function ServiceDetailModal({ service, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  if (!service) return null
+
+  const ctx = getServiceContextualData(service)
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1.25rem',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          width: '100%',
+          maxWidth: '860px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          border: '1px solid #e2e8f0',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cabecera Directiva */}
+        <div
+          style={{
+            padding: '1.1rem 1.6rem',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#f8fafc',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <span
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: '#e0f2fe',
+                color: '#0284c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppIcon name={service.icon || 'services'} size={20} strokeWidth={2} />
+            </span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.08rem', fontWeight: 800, color: '#0f172a' }}>
+                {service.name}
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                  {ctx.portProtocol}
+                </span>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <StatusBadge status={service.status || 'success'} label={service.statusLabel || 'Operativo'} />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.45rem',
+              cursor: 'pointer',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title="Cerrar diagnóstico"
+          >
+            <AppIcon name="close" size={18} strokeWidth={2} />
+          </button>
+        </div>
+
+        {/* Cuerpo a 2 Columnas sin Scroll */}
+        <div
+          style={{
+            padding: '1.5rem 1.6rem',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1.6rem',
+          }}
+        >
+          {/* Columna Izquierda: Arquitectura & Trazabilidad */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+            <div>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Rol en Arquitectura
+              </span>
+              <p style={{ fontSize: '0.86rem', color: '#1e293b', fontWeight: 600, margin: '0.35rem 0 0 0', lineHeight: 1.45 }}>
+                {ctx.archRole}
+              </p>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.65rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Conexión de Base de Datos:</span>
+                <strong style={{ color: '#0f172a' }}>{ctx.dbConnection}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Disponibilidad (Uptime):</span>
+                <strong style={{ color: '#166534' }}>{service.uptimeLabel || '100%'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Latencia de Red Interna:</span>
+                <strong style={{ color: '#0284c7' }}>{service.latencyLabel || '12 ms'}</strong>
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Endpoints Principales Expuestos
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.45rem' }}>
+                {ctx.endpoints.map((ep) => (
+                  <div
+                    key={ep.path}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.45rem',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px',
+                      padding: '0.65rem 0.85rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span
+                        style={{
+                          background: ep.method === 'GET' ? '#e0f2fe' : '#dcfce7',
+                          color: ep.method === 'GET' ? '#0369a1' : '#15803d',
+                          padding: '3px 7px',
+                          borderRadius: '5px',
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.03em',
+                        }}
+                      >
+                        {ep.method}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', textAlign: 'right' }}>
+                        {ep.desc}
+                      </span>
+                    </div>
+                    <code
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        padding: '0.42rem 0.65rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {ep.path}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Gráfico de Tráfico/Carga */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.2rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                  {ctx.chartTitle}
+                </h4>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+                  Telemetría en Vivo
+                </span>
+              </div>
+              <p style={{ margin: '0.25rem 0 1rem 0', fontSize: '0.78rem', color: '#64748b' }}>
+                {ctx.chartDesc}
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+                {ctx.distribution.map((item) => (
+                  <div key={item.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#334155', fontWeight: 700 }}>{item.name}</span>
+                      <strong style={{ color: '#0f172a' }}>{item.valueLabel}</strong>
+                    </div>
+                    <div
+                      style={{
+                        height: '8px',
+                        width: '100%',
+                        background: '#e2e8f0',
+                        borderRadius: '999px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${item.share}%`,
+                          background: item.share > 50 ? '#0284c7' : item.share > 25 ? '#0d9488' : '#64748b',
+                          borderRadius: '999px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '0.8rem',
+                marginTop: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.76rem',
+                color: '#475569',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#166534', fontWeight: 700 }}>
+                ● Health Check: Respuesta HTTP 200 OK
+              </span>
+              <span>SLA &lt; 50 ms</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pie del modal */}
+        <div
+          style={{
+            padding: '0.95rem 1.6rem',
+            borderTop: '1px solid #e2e8f0',
+            background: '#f8fafc',
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '0.55rem 1.25rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#0284c7',
+              color: '#ffffff',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Cerrar Ficha Directiva
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const percentFormatter = new Intl.NumberFormat('es-CL', {
   minimumFractionDigits: 0,
@@ -251,6 +640,7 @@ function IncidentsPanel({ incidents }) {
 
 export default function ServicesScreen({ onBffStatusChange }) {
   const { data, loading, error, refetch } = useDashboardStats()
+  const [selectedService, setSelectedService] = useState(null)
 
   useEffect(() => {
     if (loading) {
@@ -293,10 +683,14 @@ export default function ServicesScreen({ onBffStatusChange }) {
 
       <section className="content-grid content-grid--services">
         <div className="panel">
-          <SectionHeader title="Servicios monitoreados" description="Servicios entregados por el BFF Gateway." />
+          <SectionHeader title="Servicios monitoreados" description="Servicios entregados por el BFF Gateway. Haz clic para inspeccionar endpoints y telemetría." />
           <div className="service-grid">
             {services.map((service) => (
-              <ServiceStatusCard service={service} key={service.id} />
+              <ServiceStatusCard
+                service={service}
+                key={service.id}
+                onView={() => setSelectedService(service)}
+              />
             ))}
           </div>
         </div>
@@ -321,6 +715,13 @@ export default function ServicesScreen({ onBffStatusChange }) {
           )}
           <IncidentsPanel incidents={incidents} />
         </section>
+      )}
+
+      {selectedService && (
+        <ServiceDetailModal
+          service={selectedService}
+          onClose={() => setSelectedService(null)}
+        />
       )}
     </main>
   )

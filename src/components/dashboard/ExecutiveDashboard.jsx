@@ -220,7 +220,14 @@ export default function ExecutiveDashboard({ data, error, loading, onRetry, sucu
         {data.kpis.length > 0 ? (
           <div className="kpi-grid">
             {data.kpis.map((kpi) => (
-              <KpiCard kpi={kpi} key={kpi.id} />
+              <div
+                key={kpi.id}
+                onClick={() => onNavigate?.('kpis')}
+                style={{ cursor: 'pointer', transition: 'transform 0.18s ease' }}
+                title="Haz clic para ver auditoría directiva y gráficos en el módulo KPIs"
+              >
+                <KpiCard kpi={kpi} />
+              </div>
             ))}
           </div>
         ) : (

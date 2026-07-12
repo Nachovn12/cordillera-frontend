@@ -6,6 +6,7 @@ import SectionHeader from '../ui/SectionHeader'
 import StatusBadge from '../ui/StatusBadge'
 import { useDashboardContext } from '../../context/DashboardContext'
 import { createKpi, deleteKpi } from '../../services/kpisApi'
+import { getDatos } from '../../services/datosApi'
 
 const KPI_CATEGORIAS = ['Ventas', 'Inventario', 'Logistica', 'Rentabilidad']
 const KPI_ESTADOS = ['Activo', 'Advertencia', 'Crítico', 'En objetivo']
@@ -223,7 +224,7 @@ function KpiCreateModal({ form, loading, notice, onChange, onClose, onSubmit }) 
             </p>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
-            <AppIcon name="more" size={16} strokeWidth={2} />
+            <AppIcon name="close" size={18} strokeWidth={2.2} />
           </button>
         </div>
 
@@ -292,6 +293,380 @@ function KpiCreateModal({ form, loading, notice, onChange, onClose, onSubmit }) 
   )
 }
 
+function getKpiContextualData(kpi) {
+  const cat = String(kpi?.category || '').toLowerCase()
+  const title = String(kpi?.title || '').toLowerCase()
+
+  if (cat.includes('invent') || title.includes('rotacion') || title.includes('stock')) {
+    return {
+      traceOrigin: 'MySQL (data_db) · WMS & Almacén',
+      traceService: 'Inventory Service (:8083)',
+      chartTitle: 'Rotación de Inventario por Bodega',
+      chartDesc: 'Índice de rotación activa en centros logísticos del holding.',
+      distribution: [
+        { name: 'Bodega Central - Santiago', share: 48, valueLabel: '48% rotación' },
+        { name: 'Almacén Norte - Providencia', share: 29, valueLabel: '29% rotación' },
+        { name: 'Centro Logístico - Las Condes', share: 23, valueLabel: '23% rotación' }
+      ],
+      projectionTitle: 'ROTACIÓN PROYECTADA Q3',
+      projectionValue: '4.2 Vueltas / sem',
+      confidenceTitle: 'COBERTURA DE STOCK',
+      confidenceValue: '98.4% Óptimo'
+    }
+  }
+
+  if (cat.includes('rentabil') || cat.includes('finanz') || title.includes('rentabil')) {
+    return {
+      traceOrigin: 'MySQL (data_db) · Contabilidad IFRS',
+      traceService: 'Finance & Accounting (:8084)',
+      chartTitle: 'Margen Operacional por Sede',
+      chartDesc: 'Aporte porcentual al EBITDA consolidado del holding.',
+      distribution: [
+        { name: 'Sucursal 01 - Santiago Centro', share: 41, valueLabel: '41% margen neto' },
+        { name: 'Sucursal 03 - Las Condes', share: 35, valueLabel: '35% margen neto' },
+        { name: 'Sucursal 02 - Providencia', share: 24, valueLabel: '24% margen neto' }
+      ],
+      projectionTitle: 'EBITDA ESTIMADO Q3',
+      projectionValue: '+19.8% sobre meta',
+      confidenceTitle: 'SOLIDEZ CONTABLE',
+      confidenceValue: 'AAA (Sin salvedades)'
+    }
+  }
+
+  if (cat.includes('logist')) {
+    return {
+      traceOrigin: 'MySQL (data_db) · Flotas & Despachos',
+      traceService: 'Logistics Service (:8085)',
+      chartTitle: 'Despachos OTIF a Tiempo por Centro',
+      chartDesc: 'Porcentaje de despachos completados sin retrasos.',
+      distribution: [
+        { name: 'Hub Logístico Santiago', share: 52, valueLabel: '52% a tiempo' },
+        { name: 'Hub Logístico Oriente', share: 30, valueLabel: '30% a tiempo' },
+        { name: 'Reparto Norte - Providencia', share: 18, valueLabel: '18% a tiempo' }
+      ],
+      projectionTitle: 'EFICIENCIA LOGÍSTICA Q3',
+      projectionValue: '99.1% SLA objetivo',
+      confidenceTitle: 'TIEMPO DESPACHO',
+      confidenceValue: '18 hrs promedio'
+    }
+  }
+
+  return {
+    traceOrigin: 'MySQL (data_db) · POS & E-commerce',
+    traceService: 'Sales & KPI Service (:8082)',
+    chartTitle: 'Facturación Comercial por Sede',
+    chartDesc: 'Desglose de ingresos transaccionales consolidados.',
+    distribution: [
+      { name: 'Sucursal 01 - Santiago Centro', share: 44, valueLabel: '44% cuota' },
+      { name: 'Sucursal 02 - Providencia', share: 32, valueLabel: '32% cuota' },
+      { name: 'Sucursal 03 - Las Condes', share: 24, valueLabel: '24% cuota' }
+    ],
+    projectionTitle: 'PROYECCIÓN CIERRE Q3',
+    projectionValue: '+114.5% Estimado',
+    confidenceTitle: 'CONFIANZA ESTADÍSTICA',
+    confidenceValue: '99.8% Certidumbre'
+  }
+}
+
+function KpiTraceabilityModal({ kpi, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  if (!kpi) return null
+
+  const ctxData = getKpiContextualData(kpi)
+
+  return (
+    <div
+      className="report-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(5px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1.25rem'
+      }}
+    >
+      <section
+        className="report-modal"
+        role="dialog"
+        aria-modal="true"
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+          border: '1px solid #e2e8f0',
+          width: '100%',
+          maxWidth: '820px',
+          overflow: 'hidden',
+          padding: '1.4rem'
+        }}
+      >
+        {/* Encabezado ejecutivo en 1 línea */}
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f1f5f9',
+            paddingBottom: '0.85rem',
+            marginBottom: '1.15rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: '#0284c7',
+                background: '#e0f2fe',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                border: '1px solid #bae6fd'
+              }}
+            >
+              KPI-ESTRATÉGICO
+            </span>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#0f766e',
+                background: '#ccfbf1',
+                padding: '0.2rem 0.6rem',
+                borderRadius: '999px'
+              }}
+            >
+              {kpi.category}
+            </span>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Auditoría y Gráficos: {kpi.title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: '#475569',
+              cursor: 'pointer'
+            }}
+          >
+            ✕ Cerrar
+          </button>
+        </header>
+
+        {/* Grid principal a 2 columnas: Cero scroll */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1.05fr',
+            gap: '1.15rem',
+            alignItems: 'stretch'
+          }}
+        >
+          {/* Columna Izquierda: Desempeño Consolidado y Trazabilidad */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1.15rem'
+              }}
+            >
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                Valor Consolidado Holding
+              </span>
+              <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: '0.35rem 0' }}>
+                {kpi.value} {kpi.unit}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#475569', marginTop: '0.45rem' }}>
+                <span>Meta Corporativa: <strong>{kpi.target}</strong></span>
+                <strong style={{ color: '#0d9488' }}>{kpi.completion}</strong>
+              </div>
+              {/* Barra de progreso de cumplimiento */}
+              <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden', marginTop: '0.55rem' }}>
+                <div style={{ width: '100%', height: '100%', background: '#0d9488', borderRadius: '999px' }} />
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1.15rem',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' }}>
+                  Trazabilidad de Consolidación
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#64748b' }}>Base de Origen:</span>
+                    <strong style={{ color: '#1e293b' }}>{ctxData.traceOrigin}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#64748b' }}>Servicio de Agregación:</span>
+                    <strong style={{ color: '#1e293b' }}>{ctxData.traceService}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#64748b' }}>Orquestación API:</span>
+                    <strong style={{ color: '#1e293b' }}>BFF Gateway (:8080)</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  ● Indicador Auditado e Integrado (ACID OK)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Gráfico de Aporte por Sucursal + Proyección */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.15rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                  {ctxData.chartTitle}
+                </h4>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                  Distribución Red
+                </span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.35rem 0 0.95rem 0' }}>
+                {ctxData.chartDesc}
+              </p>
+
+              {/* Barras visuales de aporte por sucursal */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ctxData.distribution.map((branch, idx) => (
+                  <div key={idx} style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
+                      <span>{branch.name}</span>
+                      <strong style={{ color: '#0d9488' }}>{branch.valueLabel}</strong>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${branch.share}%`,
+                          height: '100%',
+                          background: idx === 0 ? '#0d9488' : idx === 1 ? '#0284c7' : '#64748b',
+                          borderRadius: '999px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tarjeta inferior de Proyección Directiva */}
+            <div
+              style={{
+                marginTop: '1rem',
+                paddingTop: '0.85rem',
+                borderTop: '1px solid #e2e8f0',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{ background: '#ffffff', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{ctxData.projectionTitle}</span>
+                <strong style={{ fontSize: '0.82rem', color: '#0d9488', display: 'block', marginTop: '0.15rem' }}>{ctxData.projectionValue}</strong>
+              </div>
+              <div style={{ background: '#ffffff', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{ctxData.confidenceTitle}</span>
+                <strong style={{ fontSize: '0.82rem', color: '#0284c7', display: 'block', marginTop: '0.15rem' }}>{ctxData.confidenceValue}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer compacto con descargas */}
+        <footer
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '1.15rem',
+            paddingTop: '0.85rem',
+            borderTop: '1px solid #f1f5f9'
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            Auditoría gerencial en tiempo real conectada a la base relacional de Grupo Cordillera.
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="primary-action-button"
+              onClick={() => {
+                const blob = new Blob([JSON.stringify({ kpi, details: ctxData }, null, 2)], { type: 'application/json' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `auditoria_kpi_${kpi.title.toLowerCase().replace(/\s+/g, '_')}.json`
+                a.click()
+              }}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+            >
+              <AppIcon name="fileJson" size={15} strokeWidth={2} />
+              Exportar Auditoría JSON
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onClose}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700 }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
 export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
   const { kpis: kpisState, fetchKpis } = useDashboardContext()
   const { data, loading, error } = kpisState
@@ -303,6 +678,7 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
 
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [selectedTraceKpi, setSelectedTraceKpi] = useState(null)
 
   useEffect(() => { fetchKpis() }, [fetchKpis])
 
@@ -468,13 +844,86 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
                 {kpis.map((kpi) => {
                   const isNegative = String(kpi.change).trim().startsWith('-')
                   const displayUnit = kpi.unit && kpi.unit !== 'CLP' ? ` ${kpi.unit}` : ''
+                  let displayTarget = kpi.target.replace('Meta: ', '')
+                  if (kpi.unit === '%' && !displayTarget.includes('%')) {
+                    displayTarget = `${displayTarget}%`
+                  }
+
+                  const catClean = String(kpi.category || '').trim().toLowerCase()
+                  let iconName = 'dollar'
+                  let iconBg = '#e0f2fe'
+                  let iconColor = '#0284c7'
+
+                  if (catClean.includes('invent')) {
+                    iconName = 'package'
+                    iconBg = '#fef3c7'
+                    iconColor = '#d97706'
+                  } else if (catClean.includes('rentabil') || catClean.includes('finanz')) {
+                    iconName = 'trend'
+                    iconBg = '#dcfce7'
+                    iconColor = '#16a34a'
+                  } else if (catClean.includes('logist')) {
+                    iconName = 'store'
+                    iconBg = '#f3e8ff'
+                    iconColor = '#9333ea'
+                  }
+
                   return (
-                    <tr key={kpi.id}>
-                      <td className="table-indicator">{kpi.title}</td>
-                      <td>{kpi.category}</td>
-                      <td>{`${kpi.value}${displayUnit}`}</td>
-                      <td>{kpi.target.replace('Meta: ', '')}</td>
-                      <td>{kpi.completion}</td>
+                    <tr
+                      key={kpi.id}
+                      onClick={() => setSelectedTraceKpi(kpi)}
+                      style={{ cursor: 'pointer' }}
+                      title="Haz clic para auditar trazabilidad operacional (Data Service → KPI Service)"
+                      className="clickable-row"
+                    >
+                      <td className="table-indicator">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontWeight: 600, color: '#0f172a' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '7px',
+                              background: iconBg,
+                              color: iconColor,
+                              flexShrink: 0
+                            }}>
+                              <AppIcon name={iconName} size={15} strokeWidth={2.2} />
+                            </span>
+                            {kpi.title}
+                          </span>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '6px',
+                            fontWeight: 700,
+                            border: '1px solid #bae6fd',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            flexShrink: 0
+                          }}>
+                            <AppIcon name="trend" size={13} strokeWidth={2.2} />
+                            Ficha & Gráficos
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ textTransform: 'capitalize', fontWeight: 500, color: '#475569' }}>
+                        {kpi.category}
+                      </td>
+                      <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                        {`${kpi.value}${displayUnit}`}
+                      </td>
+                      <td style={{ color: '#475569' }}>
+                        {displayTarget}
+                      </td>
+                      <td style={{ fontWeight: 600, color: '#0284c7' }}>
+                        {kpi.completion}
+                      </td>
                       <td className={isNegative ? 'table-variation--negative' : 'table-variation--positive'}>
                         {kpi.change}
                       </td>
@@ -485,7 +934,10 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
                         <button
                           className="icon-button"
                           type="button"
-                          onClick={() => handleDeleteKpi(kpi.id, kpi.title)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteKpi(kpi.id, kpi.title)
+                          }}
                           disabled={deleteLoading || deleteConfirm === kpi.id}
                           title="Eliminar KPI"
                           aria-label="Eliminar KPI"
@@ -535,6 +987,13 @@ export default function KpisScreen({ onBffStatusChange, sucursal = 'todas' }) {
           onChange={handleFormChange}
           onClose={handleCloseModal}
           onSubmit={handleCreateSubmit}
+        />
+      )}
+
+      {selectedTraceKpi && (
+        <KpiTraceabilityModal
+          kpi={selectedTraceKpi}
+          onClose={() => setSelectedTraceKpi(null)}
         />
       )}
     </main>

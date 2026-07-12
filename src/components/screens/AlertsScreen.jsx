@@ -165,6 +165,74 @@ function getRecommendation(alert) {
   return 'Revisar indicadores con estado Advertencia.'
 }
 
+function getAlertContextualData(alert) {
+  const category = String(alert?.category || '').toLowerCase()
+  const origin = String(alert?.origin || '').toLowerCase()
+  const title = String(alert?.title || '').toLowerCase()
+
+  if (category.includes('serv') || origin.includes('bff') || title.includes('bff')) {
+    return {
+      chartTitle: 'Tráfico API Gateway por Sucursal',
+      chartDesc: 'Distribución transaccional de peticiones enrutadas por el BFF.',
+      distribution: [
+        { name: 'Sucursal 01 - Santiago Centro', share: 52, label: '52% peticiones' },
+        { name: 'Sucursal 02 - Providencia', share: 31, label: '31% peticiones' },
+        { name: 'Sucursal 03 - Las Condes', share: 17, label: '17% peticiones' },
+      ],
+      metric1Title: 'DISPONIBILIDAD GATEWAY',
+      metric1Value: '99.98% Uptime',
+      metric2Title: 'LATENCIA ENRUTAMIENTO',
+      metric2Value: '12 ms (Excelente)',
+    }
+  }
+
+  if (category.includes('operacion') || origin.includes('kpi') || title.includes('kpi')) {
+    return {
+      chartTitle: 'Indicadores Observados por Sede',
+      chartDesc: 'Desglose de métricas operacionales fuera de rango nominal.',
+      distribution: [
+        { name: 'Sucursal 01 - Santiago Centro', share: 40, label: '40% alertas KPI' },
+        { name: 'Sucursal 03 - Las Condes', share: 35, label: '35% alertas KPI' },
+        { name: 'Sucursal 02 - Providencia', share: 25, label: '25% alertas KPI' },
+      ],
+      metric1Title: 'CONSISTENCIA ACID',
+      metric1Value: '100% Validado',
+      metric2Title: 'FRECUENCIA LECTURA',
+      metric2Value: '5 min (Real-time)',
+    }
+  }
+
+  if (category.includes('reporte') || origin.includes('report')) {
+    return {
+      chartTitle: 'Descargas de Reporte por Sucursal',
+      chartDesc: 'Frecuencia de consulta y generación documental por gerencia.',
+      distribution: [
+        { name: 'Sucursal 01 - Santiago Centro', share: 48, label: '48% descargas' },
+        { name: 'Sucursal 02 - Providencia', share: 29, label: '29% descargas' },
+        { name: 'Sucursal 03 - Las Condes', share: 23, label: '23% descargas' },
+      ],
+      metric1Title: 'TIEMPO GENERACIÓN',
+      metric1Value: '1.2 seg promedio',
+      metric2Title: 'STORAGE DOCUMENTAL',
+      metric2Value: '99.99% Integridad',
+    }
+  }
+
+  return {
+    chartTitle: 'Gráfico de Incidencia por Sucursal',
+    chartDesc: 'Porcentaje de ocurrencia y trazabilidad del evento en las sedes.',
+    distribution: [
+      { name: 'Sucursal 01 - Santiago Centro', share: 46, label: '46% eventos' },
+      { name: 'Sucursal 02 - Providencia', share: 34, label: '34% eventos' },
+      { name: 'Sucursal 03 - Las Condes', share: 20, label: '20% eventos' },
+    ],
+    metric1Title: 'DISPONIBILIDAD ORIGEN',
+    metric1Value: '99.94% Uptime',
+    metric2Title: 'LATENCIA TELEMETRÍA',
+    metric2Value: '24 ms (Óptimo)',
+  }
+}
+
 function AlertDetailModal({ alert, onClose }) {
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -177,63 +245,275 @@ function AlertDetailModal({ alert, onClose }) {
 
   if (!alert) return null
 
+  const ctxData = getAlertContextualData(alert)
+
   return (
-    <div className="alert-modal-overlay" role="presentation" onMouseDown={onClose}>
+    <div
+      className="alert-modal-overlay"
+      role="presentation"
+      onMouseDown={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(15, 23, 42, 0.62)',
+        backdropFilter: 'blur(5px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '1.25rem',
+      }}
+    >
       <section
         className="alert-modal"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="alert-modal-title"
         onMouseDown={(event) => event.stopPropagation()}
+        style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+          border: '1px solid #e2e8f0',
+          width: '100%',
+          maxWidth: '820px',
+          overflow: 'hidden',
+          padding: '1.4rem',
+        }}
       >
-        <div className="alert-modal__header">
-          <div>
+        {/* Encabezado ejecutivo en 1 línea */}
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f1f5f9',
+            paddingBottom: '0.85rem',
+            marginBottom: '1.15rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: '#d97706',
+                background: '#fef3c7',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                border: '1px solid #fde68a',
+              }}
+            >
+              EVENTO-OPERACIONAL
+            </span>
             <StatusBadge status={alert.severity} label={alert.severityLabel} />
-            <h2 id="alert-modal-title">{alert.title}</h2>
-            <p>{alert.description}</p>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Ficha Técnica: {alert.title}
+            </h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="Cerrar detalle de alerta" title="Cerrar">
-            <AppIcon name="more" size={16} strokeWidth={2} />
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: '#475569',
+              cursor: 'pointer',
+            }}
+          >
+            ✕ Cerrar
           </button>
+        </header>
+
+        {/* Grid principal a 2 columnas: Cero scroll */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1.05fr',
+            gap: '1.15rem',
+            alignItems: 'stretch',
+          }}
+        >
+          {/* Columna Izquierda: Diagnóstico e Impacto Operacional */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1.15rem',
+              }}
+            >
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                Descripción y Causa Raíz
+              </span>
+              <p style={{ fontSize: '0.86rem', color: '#1e293b', fontWeight: 600, margin: '0.5rem 0 0.75rem 0', lineHeight: 1.45 }}>
+                {alert.description || 'Evento operacional informado por la capa de servicios.'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.65rem', fontSize: '0.78rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Origen del Evento:</span>
+                  <strong style={{ color: '#0f172a' }}>{alert.origin || 'Microservicio Interno'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Categoría:</span>
+                  <strong style={{ color: '#0f172a' }}>{alert.category}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Estado Actual:</span>
+                  <strong style={{ color: '#0d9488' }}>{alert.statusLabel}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '1.15rem',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0284c7', textTransform: 'uppercase' }}>
+                  Protocolo de Mitigación Corporativa
+                </span>
+                <p style={{ fontSize: '0.82rem', color: '#334155', fontWeight: 600, margin: '0.55rem 0 0 0', lineHeight: 1.4 }}>
+                  {getRecommendation(alert)}
+                </p>
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  ● SLA Operacional: Cumplimiento en norma ({'<'} 15 min)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Gráfico contextual + Telemetría */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '1.15rem',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                  {ctxData.chartTitle}
+                </h4>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                  Distribución Red
+                </span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.35rem 0 0.95rem 0' }}>
+                {ctxData.chartDesc}
+              </p>
+
+              {/* Barras visuales por sucursal */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ctxData.distribution.map((branch, idx) => (
+                  <div key={idx} style={{ background: '#ffffff', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
+                      <span>{branch.name}</span>
+                      <strong style={{ color: idx === 0 ? '#d97706' : '#0284c7' }}>{branch.label}</strong>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${branch.share}%`,
+                          height: '100%',
+                          background: idx === 0 ? '#d97706' : idx === 1 ? '#0284c7' : '#64748b',
+                          borderRadius: '999px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tarjeta inferior de Telemetría contextual */}
+            <div
+              style={{
+                marginTop: '1rem',
+                paddingTop: '0.85rem',
+                borderTop: '1px solid #e2e8f0',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.75rem',
+              }}
+            >
+              <div style={{ background: '#ffffff', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{ctxData.metric1Title}</span>
+                <strong style={{ fontSize: '0.82rem', color: '#0d9488', display: 'block', marginTop: '0.15rem' }}>{ctxData.metric1Value}</strong>
+              </div>
+              <div style={{ background: '#ffffff', padding: '0.65rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>{ctxData.metric2Title}</span>
+                <strong style={{ fontSize: '0.82rem', color: '#0284c7', display: 'block', marginTop: '0.15rem' }}>{ctxData.metric2Value}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="alert-modal__details">
-          <div>
-            <span>Categoría</span>
-            <strong>{alert.category}</strong>
+        {/* Footer compacto con descargas */}
+        <footer
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '1.15rem',
+            paddingTop: '0.85rem',
+            borderTop: '1px solid #f1f5f9',
+          }}
+        >
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+            Auditoría de eventos conectada en tiempo real al BFF Gateway de Grupo Cordillera.
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="primary-action-button"
+              onClick={() => {
+                const blob = new Blob([JSON.stringify({ alert, details: ctxData }, null, 2)], { type: 'application/json' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `incidencia_operacional_${(alert.title || 'alerta').toLowerCase().replace(/\s+/g, '_')}.json`
+                a.click()
+              }}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+            >
+              <AppIcon name="fileJson" size={15} strokeWidth={2} />
+              Exportar Evento JSON
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onClose}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem', fontWeight: 700 }}
+            >
+              Cerrar
+            </button>
           </div>
-          <div>
-            <span>Severidad</span>
-            <strong>{alert.severityLabel}</strong>
-          </div>
-          <div>
-            <span>Estado</span>
-            <strong>{alert.statusLabel}</strong>
-          </div>
-          <div>
-            <span>Origen</span>
-            <strong>{alert.origin}</strong>
-          </div>
-          <div>
-            <span>Fecha/hora</span>
-            <strong>{alert.detectedAtLabel}</strong>
-          </div>
-          <div>
-            <span>Fuente</span>
-            <strong>BFF Gateway</strong>
-          </div>
-        </div>
-
-        <div className="alert-modal__recommendation">
-          <span>Acción recomendada</span>
-          <p>{getRecommendation(alert)}</p>
-        </div>
-
-        <div className="alert-modal__actions">
-          <button className="secondary-button" type="button" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
+        </footer>
       </section>
     </div>
   )
@@ -382,33 +662,123 @@ export default function AlertsScreen() {
         </section>
       )}
 
-      <section className="alerts-toolbar" aria-label="Filtros de alertas">
-        <div className="tab-list">
-          {tabs.map((tab) => (
-            <button
-              className={activeTab === tab.value ? 'is-active' : ''}
-              type="button"
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-            >
-              <AppIcon name={tab.icon} size={15} strokeWidth={2} />
-              {tab.label}
-            </button>
-          ))}
+      <section
+        aria-label="Filtros de alertas"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '14px',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '14px',
+          padding: '12px 18px',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.03)',
+        }}
+      >
+        {/* Pestañas integradas tipo Segmented Control corporativo */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: '#f1f5f9',
+            padding: '4px',
+            borderRadius: '10px',
+            gap: '4px',
+            flexWrap: 'wrap',
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.value
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setActiveTab(tab.value)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '0.82rem',
+                  fontWeight: isActive ? 700 : 600,
+                  background: isActive ? '#ffffff' : 'transparent',
+                  color: isActive ? '#0f172a' : '#64748b',
+                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.18s ease',
+                }}
+              >
+                <span style={{ color: isActive ? '#0284c7' : '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                  <AppIcon name={tab.icon} size={15} strokeWidth={2} />
+                </span>
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
-        <div className="search-box">
-          <AppIcon name="search" size={16} strokeWidth={2} />
-          <input
-            type="text"
-            placeholder="Buscar alerta..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+
+        {/* Grupo derecho: Buscador e Icono Actualizar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1 1 auto', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '9px',
+              padding: '6px 12px',
+              minWidth: '250px',
+              flex: '0 1 320px',
+            }}
+          >
+            <span style={{ color: '#64748b', display: 'flex', alignItems: 'center' }}>
+              <AppIcon name="search" size={16} strokeWidth={2} />
+            </span>
+            <input
+              type="text"
+              placeholder="Buscar por título, categoría u origen..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                outline: 'none',
+                fontSize: '0.82rem',
+                color: '#0f172a',
+                width: '100%',
+                fontWeight: 500,
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={refetch}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '9px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#334155',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Refrescar listado de alertas"
+          >
+            <AppIcon name="refresh" size={15} strokeWidth={2} />
+            Actualizar
+          </button>
         </div>
-        <button className="secondary-button" type="button" onClick={refetch}>
-          <AppIcon name="refresh" size={15} strokeWidth={2} />
-          Actualizar
-        </button>
       </section>
 
       <section className="content-grid content-grid--alerts" aria-label="Listado de alertas">

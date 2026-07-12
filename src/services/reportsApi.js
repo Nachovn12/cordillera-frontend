@@ -103,6 +103,23 @@ function normalizeStatus(value) {
   };
 }
 
+function getSmartReportDescription(title, area) {
+  const t = String(title || "").toLowerCase();
+  if (t.includes("consolidado") || t.includes("semestral")) {
+    return "Balance integral de ingresos, costos operacionales y rentabilidad por sucursal.";
+  }
+  if (t.includes("e-commerce") || t.includes("pos")) {
+    return "Análisis comparativo de volumen transaccional físico vs. canal de ventas digital.";
+  }
+  if (t.includes("stock") || t.includes("quiebre") || t.includes("inventario")) {
+    return "Monitoreo logístico de inventario crítico y alertas tempranas de abastecimiento.";
+  }
+  if (t.includes("resultado") || t.includes("mensual") || t.includes("finan")) {
+    return "Estado contable consolidado mensual y flujo de caja normado por IFRS.";
+  }
+  return `Reporte analítico consolidado del área de ${area || "Gestión"} para la toma de decisiones directivas.`;
+}
+
 function normalizeReport(report, index) {
   const formats = normalizeFormats(report);
   const dateValue = getFirstDefined(
@@ -118,26 +135,29 @@ function normalizeReport(report, index) {
   const rawValue = getFirstDefined(report.valor, report.value, report.monto);
   const valueNumber = Number(rawValue);
 
+  const title = getFirstDefined(
+    report.titulo,
+    report.title,
+    report.nombre,
+    "Reporte sin título",
+  );
+  const area = getFirstDefined(
+    report.area,
+    report.categoria,
+    report.category,
+    "General",
+  );
+
   return {
     id: getFirstDefined(report.id, report.codigo, `reporte-${index}`),
-    title: getFirstDefined(
-      report.titulo,
-      report.title,
-      report.nombre,
-      "Reporte sin título",
-    ),
+    title,
     description: getFirstDefined(
       report.descripcion,
       report.description,
       report.detalle,
-      "Sin descripción disponible",
+      getSmartReportDescription(title, area),
     ),
-    area: getFirstDefined(
-      report.area,
-      report.categoria,
-      report.category,
-      "General",
-    ),
+    area,
     formats,
     primaryFormat: formats[0]?.label || "PDF",
     generatedAt: dateValue,

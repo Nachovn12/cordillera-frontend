@@ -57,7 +57,12 @@ export default function AlertItem({
   if (table) {
     return (
       <article className="alerts-card-item">
-        <div className="alerts-card-item__main">
+        <div
+          className="alerts-card-item__main"
+          onClick={onView}
+          style={{ cursor: 'pointer' }}
+          title="Haz clic para abrir ficha técnica y telemetría de incidencia"
+        >
           <span className={`alerts-card-item__icon alerts-card-item__icon--${meta.tone}`}>
             <AppIcon name={meta.icon} size={18} strokeWidth={2} />
           </span>
@@ -77,13 +82,25 @@ export default function AlertItem({
         </div>
         <div className="alerts-card-item__actions">
           <button
-            className="icon-button"
             type="button"
             onClick={onView}
-            aria-label={`Ver detalle de ${title}`}
-            title={`Ver detalle de ${title}`}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: '6px',
+              border: '1px solid #bae6fd',
+              background: '#e0f2fe',
+              color: '#0369a1',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              cursor: 'pointer'
+            }}
+            title={`Ver ficha y gráfico de ${title}`}
           >
-            <AppIcon name="eye" size={16} strokeWidth={2} />
+            <AppIcon name="analytics" size={14} strokeWidth={2} />
+            Ficha & Gráfico
           </button>
           <div className="alert-menu-anchor">
             <button

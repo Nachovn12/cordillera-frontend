@@ -46,9 +46,11 @@ import {
   Upload,
   Users,
   WifiOff,
+  X,
 } from 'lucide-react'
 
 const iconMap = {
+  close: X,
   alerts: Bell,
   arrowRight: ArrowRight,
   bell: Bell,
