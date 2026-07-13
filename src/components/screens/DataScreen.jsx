@@ -179,7 +179,7 @@ export default function DataScreen({ refreshToken = 0, onBffStatusChange, sucurs
       
       // Local filter by Sistema
       if (filterSistema !== 'todos') {
-        data = data.filter(d => d.sistemaOrigen === filterSistema)
+        data = data.filter(d => String(d.sistemaOrigen || '').toUpperCase() === String(filterSistema).toUpperCase())
       }
       
       setDatos(data)
@@ -299,7 +299,7 @@ export default function DataScreen({ refreshToken = 0, onBffStatusChange, sucurs
   }
 
   const sistemasCounts = SISTEMAS_ORIGEN.map((s) => {
-    return datos.filter((d) => String(d.sistemaOrigen || '').toUpperCase() === s).length
+    return datos.filter((d) => String(d.sistemaOrigen || '').toUpperCase() === String(s).toUpperCase()).length
   })
 
   const sucursalesData = [1, 2, 3].map((sucId) => {
