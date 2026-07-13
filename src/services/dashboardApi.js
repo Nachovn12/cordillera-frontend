@@ -142,7 +142,14 @@ function normalizeKpi(kpi, index) {
 
   const titleClean = String(kpi?.nombre || kpi?.title || "").toLowerCase();
   // Corrige la unidad basada en la categoría y título (fuente de verdad)
-  if (titleClean.includes("rotacion") || titleClean.includes("rotación")) {
+  if (
+    titleClean.includes("rotacion") ||
+    titleClean.includes("rotación") ||
+    titleClean.includes("crecimiento") ||
+    titleClean.includes("tasa") ||
+    titleClean.includes("margen") ||
+    unit === "%"
+  ) {
     unit = "%";
   } else {
     unit = enforceUnitByCategory(category, unit);
